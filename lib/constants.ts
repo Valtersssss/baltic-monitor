@@ -78,28 +78,34 @@ export const COUNTRY_CENTRES: Record<string, [number, number]> = {
   LT: [23.8, 55.5],
 };
 
+// Seeded pseudo-random so positions are stable per article
+function seededRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return (Math.abs(hash) % 10000) / 10000;
+}
+
 export function geolocate(
   title: string,
   description: string,
   country: string
 ): [number, number] {
   const text = (title + " " + description).toLowerCase();
+  const seed = title.slice(0, 20); // stable seed per article
 
-  // Try to match a specific named location
   for (const loc of LOCATIONS) {
     if (loc.names.some((n) => text.includes(n))) {
-      // Small jitter so overlapping articles don't stack exactly
-      return [
-        loc.lng + (Math.random() - 0.5) * 0.2,
-        loc.lat + (Math.random() - 0.5) * 0.15,
-      ];
+      const jx = (seededRandom(seed + "x") - 0.5) * 0.2;
+      const jy = (seededRandom(seed + "y") - 0.5) * 0.15;
+      return [loc.lng + jx, loc.lat + jy];
     }
   }
 
-  // Fallback — spread across country with larger jitter
   const base = COUNTRY_CENTRES[country] || [24.5, 57.0];
-  return [
-    base[0] + (Math.random() - 0.5) * 2.0,
-    base[1] + (Math.random() - 0.5) * 1.4,
-  ];
+  const jx = (seededRandom(seed + "fx") - 0.5) * 2.0;
+  const jy = (seededRandom(seed + "fy") - 0.5) * 1.4;
+  return [base[0] + jx, base[1] + jy];
 }
