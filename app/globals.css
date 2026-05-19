@@ -1,37 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #111318;
-  --bg-secondary: #191d26;
-  --bg-tertiary: #1f2433;
-  --bg-elevated: #252c3d;
+  --bg-primary: #0a0b0e;
+  --bg-secondary: #0f1117;
+  --bg-tertiary: #141720;
+  --bg-elevated: #1a1f2e;
 
-  --border: rgba(255, 255, 255, 0.08);
-  --border-accent: rgba(255, 255, 255, 0.15);
+  --border: rgba(255, 255, 255, 0.07);
+  --border-accent: rgba(255, 255, 255, 0.13);
 
-  --text-primary: #f4f7fb;
-  --text-secondary: #b0c0d8;
-  --text-muted: #637080;
+  --text-primary: #ffffff;
+  --text-secondary: #b8c8e0;
+  --text-muted: #566070;
 
-  --accent-blue: #5ba3f5;
-  --accent-red: #f26d6d;
-  --accent-amber: #f5b942;
-  --accent-green: #4ec994;
-  --accent-purple: #a78bfa;
+  --accent-blue: #4d9ef7;
+  --accent-red: #f56565;
+  --accent-amber: #f6ad55;
+  --accent-green: #48bb78;
+  --accent-purple: #9f7aea;
 
-  --cat-mil: #f26d6d;
-  --cat-nato: #5ba3f5;
-  --cat-cyber: #f5b942;
-  --cat-pol: #a78bfa;
-  --cat-energy: #4ec994;
-  --cat-gen: #7a8fa8;
+  --cat-mil: #f56565;
+  --cat-nato: #4d9ef7;
+  --cat-cyber: #f6ad55;
+  --cat-pol: #9f7aea;
+  --cat-energy: #48bb78;
+  --cat-gen: #718096;
+
+  /* Country colors */
+  --ee: #4d9ef7;
+  --lv: #f56565;
+  --lt: #f6d860;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
@@ -41,10 +42,9 @@ html, body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }

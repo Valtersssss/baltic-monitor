@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@maptiler/sdk/dist/maptiler-sdk.css";
 
 export const metadata: Metadata = {
   title: "Baltic Monitor",

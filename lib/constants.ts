@@ -32,7 +32,6 @@ export const COUNTRY_LABELS: Record<string, string> = {
   ALL: "All",
 };
 
-// Named locations for geocoding articles
 export const LOCATIONS = [
   // Estonia
   { names: ["tallinn", "kadriorg", "riigikogu", "toompea"], lng: 24.745, lat: 59.437, country: "EE" },
@@ -43,6 +42,7 @@ export const LOCATIONS = [
   { names: ["kuusalu"], lng: 25.45, lat: 59.45, country: "EE" },
   { names: ["peipus", "peipsi"], lng: 27.5, lat: 58.7, country: "EE" },
   { names: ["rakvere"], lng: 26.355, lat: 59.346, country: "EE" },
+  { names: ["haapsalu"], lng: 23.543, lat: 58.943, country: "EE" },
   // Latvia
   { names: ["riga", "rīga", "saeima"], lng: 24.105, lat: 56.946, country: "LV" },
   { names: ["daugavpils"], lng: 26.536, lat: 55.874, country: "LV" },
@@ -57,20 +57,25 @@ export const LOCATIONS = [
   { names: ["ludza"], lng: 27.716, lat: 56.544, country: "LV" },
   { names: ["balvi"], lng: 27.266, lat: 57.131, country: "LV" },
   { names: ["alūksne", "aluksne"], lng: 27.052, lat: 57.421, country: "LV" },
+  { names: ["bauska"], lng: 24.193, lat: 56.408, country: "LV" },
+  { names: ["tukums"], lng: 23.153, lat: 56.967, country: "LV" },
+  { names: ["cēsis", "cesis"], lng: 25.272, lat: 57.312, country: "LV" },
   // Lithuania
   { names: ["vilnius", "seimas"], lng: 25.279, lat: 54.687, country: "LT" },
   { names: ["kaunas"], lng: 23.903, lat: 54.898, country: "LT" },
   { names: ["klaipėda", "klaipeda"], lng: 21.144, lat: 55.703, country: "LT" },
   { names: ["šiauliai", "siauliai"], lng: 23.313, lat: 55.934, country: "LT" },
   { names: ["panevėžys", "panevezys"], lng: 24.361, lat: 55.734, country: "LT" },
+  { names: ["alytus"], lng: 24.046, lat: 54.396, country: "LT" },
+  { names: ["marijampolė", "marijampole"], lng: 23.354, lat: 54.559, country: "LT" },
   { names: ["suwalki", "suwałki"], lng: 22.93, lat: 54.1, country: "LT" },
   { names: ["kaliningrad"], lng: 20.507, lat: 54.71, country: "LT" },
 ];
 
 export const COUNTRY_CENTRES: Record<string, [number, number]> = {
-  EE: [24.7, 58.9],
-  LV: [24.8, 56.9],
-  LT: [24.0, 55.4],
+  EE: [25.2, 58.7],
+  LV: [25.3, 56.8],
+  LT: [23.8, 55.5],
 };
 
 export function geolocate(
@@ -79,17 +84,22 @@ export function geolocate(
   country: string
 ): [number, number] {
   const text = (title + " " + description).toLowerCase();
+
+  // Try to match a specific named location
   for (const loc of LOCATIONS) {
     if (loc.names.some((n) => text.includes(n))) {
+      // Small jitter so overlapping articles don't stack exactly
       return [
-        loc.lng + (Math.random() - 0.5) * 0.15,
-        loc.lat + (Math.random() - 0.5) * 0.1,
+        loc.lng + (Math.random() - 0.5) * 0.2,
+        loc.lat + (Math.random() - 0.5) * 0.15,
       ];
     }
   }
+
+  // Fallback — spread across country with larger jitter
   const base = COUNTRY_CENTRES[country] || [24.5, 57.0];
   return [
-    base[0] + (Math.random() - 0.5) * 1.0,
-    base[1] + (Math.random() - 0.5) * 0.7,
+    base[0] + (Math.random() - 0.5) * 2.0,
+    base[1] + (Math.random() - 0.5) * 1.4,
   ];
 }
