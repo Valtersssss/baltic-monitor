@@ -78,14 +78,11 @@ export const COUNTRY_CENTRES: Record<string, [number, number]> = {
   LT: [23.8, 55.5],
 };
 
-// Seeded pseudo-random so positions are stable per article
-function seededRandom(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  return (Math.abs(hash) % 10000) / 10000;
+// Geocode articles — returns stable positions with ring offset for clusters
+const locationCounts: Record<string, number> = {};
+
+export function resetGeolocate() {
+  Object.keys(locationCounts).forEach(k => delete locationCounts[k]);
 }
 
 export function geolocate(
@@ -94,18 +91,33 @@ export function geolocate(
   country: string
 ): [number, number] {
   const text = (title + " " + description).toLowerCase();
-  const seed = title.slice(0, 20); // stable seed per article
 
   for (const loc of LOCATIONS) {
     if (loc.names.some((n) => text.includes(n))) {
-      const jx = (seededRandom(seed + "x") - 0.5) * 0.2;
-      const jy = (seededRandom(seed + "y") - 0.5) * 0.15;
-      return [loc.lng + jx, loc.lat + jy];
+      const key = `${loc.lng},${loc.lat}`;
+      const count = locationCounts[key] || 0;
+      locationCounts[key] = count + 1;
+
+      // Spiral offset so articles at same city spread in a neat ring
+      if (count === 0) return [loc.lng, loc.lat];
+      const angle = (count * 137.5) * (Math.PI / 180); // golden angle
+      const radius = 0.08 + Math.floor(count / 8) * 0.08;
+      return [
+        loc.lng + Math.cos(angle) * radius,
+        loc.lat + Math.sin(angle) * radius * 0.6,
+      ];
     }
   }
 
+  // Fallback — spread across country
   const base = COUNTRY_CENTRES[country] || [24.5, 57.0];
-  const jx = (seededRandom(seed + "fx") - 0.5) * 2.0;
-  const jy = (seededRandom(seed + "fy") - 0.5) * 1.4;
-  return [base[0] + jx, base[1] + jy];
+  const key = `fallback-${country}`;
+  const count = locationCounts[key] || 0;
+  locationCounts[key] = count + 1;
+  const angle = (count * 137.5) * (Math.PI / 180);
+  const radius = 0.3 + Math.floor(count / 8) * 0.3;
+  return [
+    base[0] + Math.cos(angle) * radius,
+    base[1] + Math.sin(angle) * radius * 0.6,
+  ];
 }

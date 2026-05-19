@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { Article, Vessel } from "@/types";
-import { CAT_COLORS, geolocate } from "@/lib/constants";
+import { CAT_COLORS, geolocate, resetGeolocate } from "@/lib/constants";
 
 interface MapProps {
   articles: Article[];
@@ -46,6 +46,7 @@ export default function Map({
   articlesRef.current = articles;
 
   const buildGeoJSON = useCallback((arts: Article[]) => {
+    resetGeolocate(); // reset spiral counts before each render
     return {
       type: "FeatureCollection",
       features: arts.slice(0, 50).map((a) => {
