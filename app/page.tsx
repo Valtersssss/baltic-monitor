@@ -135,7 +135,7 @@ export default function Dashboard() {
         style={{
           flex: 1,
           display: "grid",
-          gridTemplateColumns: "1fr 300px",
+          gridTemplateColumns: "1fr 360px",
           overflow: "hidden",
         }}
       >
