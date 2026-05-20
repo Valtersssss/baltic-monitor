@@ -30,12 +30,30 @@ function isResolved(article: Article): boolean {
   return RESOLVED_KEYWORDS.some(k => text.includes(k));
 }
 
-function getZoneColor(article: Article): { fill: string; stroke: string; opacity: number } {
+function getZoneColor(article: Article): { fill: string; stroke: string; fillOpacity: number; strokeOpacity: number } {
   const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
-  if (isResolved(article)) return { fill: "#f59e0b", stroke: "#f59e0b", opacity: 0.12 };
-  if (hoursAgo < 2) return { fill: "#ef4444", stroke: "#ef4444", opacity: 0.18 };
-  if (hoursAgo < 6) return { fill: "#f97316", stroke: "#f97316", opacity: 0.14 };
-  return { fill: "#f59e0b", stroke: "#f59e0b", opacity: 0.1 };
+  if (isResolved(article)) return { fill: "#94a3b8", stroke: "#94a3b8", fillOpacity: 0.06, strokeOpacity: 0.4 };
+  if (hoursAgo < 2) return { fill: "#ef4444", stroke: "#ef4444", fillOpacity: 0.12, strokeOpacity: 0.9 };
+  if (hoursAgo < 6) return { fill: "#ef4444", stroke: "#f97316", fillOpacity: 0.08, strokeOpacity: 0.6 };
+  return { fill: "#f59e0b", stroke: "#f59e0b", fillOpacity: 0.05, strokeOpacity: 0.4 };
+}
+
+// Deduplicate threat articles by location proximity
+function deduplicateThreats(articles: Article[]): Article[] {
+  const result: Article[] = [];
+  const used: Array<[number, number]> = [];
+  for (const article of articles) {
+    const [lng, lat] = geolocate(article.title, article.description, article.country);
+    const tooClose = used.some(([ulng, ulat]) => {
+      const dist = Math.sqrt(Math.pow(lng - ulng, 2) + Math.pow(lat - ulat, 2));
+      return dist < 0.3; // ~30km
+    });
+    if (!tooClose) {
+      result.push(article);
+      used.push([lng, lat]);
+    }
+  }
+  return result;
 }
 
 // Create a GeoJSON circle polygon
@@ -100,9 +118,10 @@ export default function Map({
     } catch(e) {}
 
     resetGeolocate();
-    threatArticles.slice(0, 10).forEach((article, i) => {
+    const dedupedThreats = deduplicateThreats(threatArticles);
+    dedupedThreats.slice(0, 10).forEach((article, i) => {
       const [lng, lat] = geolocate(article.title, article.description, article.country);
-      const { fill, stroke, opacity } = getZoneColor(article);
+      const { fill, stroke, fillOpacity, strokeOpacity } = getZoneColor(article);
       const resolved = isResolved(article);
       const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
       const radius = hoursAgo < 1 ? 35 : 22;
@@ -127,7 +146,7 @@ export default function Map({
             id: `threat-fill-${i}`,
             type: "fill",
             source: srcId,
-            paint: { "fill-color": fill, "fill-opacity": opacity },
+            paint: { "fill-color": fill, "fill-opacity": fillOpacity },
           });
         }
 
@@ -139,7 +158,7 @@ export default function Map({
             paint: {
               "line-color": stroke,
               "line-width": resolved ? 1.5 : 2.5,
-              "line-opacity": resolved ? 0.5 : 0.9,
+              "line-opacity": resolved ? 0.35 : strokeOpacity,
               "line-dasharray": resolved ? [4, 3] : [1],
             },
           });
