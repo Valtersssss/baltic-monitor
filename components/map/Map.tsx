@@ -111,6 +111,8 @@ export default function Map({
     // Remove old zones
     try {
       for (let i = 0; i < 20; i++) {
+        if (map.getLayer(`threat-label-${i}`)) map.removeLayer(`threat-label-${i}`);
+        if (map.getSource(`threat-label-src-${i}`)) map.removeSource(`threat-label-src-${i}`);
         if (map.getLayer(`threat-fill-${i}`)) map.removeLayer(`threat-fill-${i}`);
         if (map.getLayer(`threat-stroke-${i}`)) map.removeLayer(`threat-stroke-${i}`);
         if (map.getSource(`threat-${i}`)) map.removeSource(`threat-${i}`);
@@ -141,25 +143,66 @@ export default function Map({
           (map.getSource(srcId) as any).setData(geojson);
         }
 
+        // Solid fill
         if (!map.getLayer(`threat-fill-${i}`)) {
           map.addLayer({
             id: `threat-fill-${i}`,
             type: "fill",
             source: srcId,
-            paint: { "fill-color": fill, "fill-opacity": fillOpacity },
+            paint: {
+              "fill-color": fill,
+              "fill-opacity": resolved ? 0.04 : fillOpacity,
+              "fill-pattern": undefined,
+            },
           });
         }
 
+        // Border — solid red for active, dashed gray for resolved
         if (!map.getLayer(`threat-stroke-${i}`)) {
           map.addLayer({
             id: `threat-stroke-${i}`,
             type: "line",
             source: srcId,
             paint: {
-              "line-color": stroke,
-              "line-width": resolved ? 1.5 : 2.5,
-              "line-opacity": resolved ? 0.35 : strokeOpacity,
-              "line-dasharray": resolved ? [4, 3] : [1],
+              "line-color": resolved ? "#64748b" : stroke,
+              "line-width": resolved ? 1 : 2,
+              "line-opacity": resolved ? 0.3 : strokeOpacity,
+              "line-dasharray": resolved ? [4, 4] : [1],
+            },
+          });
+        }
+
+        // Add label at centre of zone
+        const labelSrcId = `threat-label-src-${i}`;
+        const labelId = `threat-label-${i}`;
+        const labelGeojson = {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [lng, lat] },
+          properties: {
+            label: resolved ? "✓ CLEARED" : "⚠ DRONE ALERT",
+            color: resolved ? "#64748b" : "#ef4444",
+          },
+        };
+        if (!map.getSource(labelSrcId)) {
+          map.addSource(labelSrcId, { type: "geojson", data: labelGeojson as any });
+        }
+        if (!map.getLayer(labelId)) {
+          map.addLayer({
+            id: labelId,
+            type: "symbol",
+            source: labelSrcId,
+            layout: {
+              "text-field": ["get", "label"],
+              "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+              "text-size": 10,
+              "text-letter-spacing": 0.1,
+              "text-anchor": "center",
+            },
+            paint: {
+              "text-color": ["get", "color"],
+              "text-halo-color": "rgba(0,0,0,0.8)",
+              "text-halo-width": 2,
+              "text-opacity": resolved ? 0.5 : 0.9,
             },
           });
         }
