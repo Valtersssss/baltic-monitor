@@ -345,6 +345,85 @@ export default function Dashboard() {
             focusCountry={filterCountry !== "ALL" ? filterCountry : null}
           />
 
+          {/* Article card overlay on map */}
+          {activeArticle && (() => {
+            const color = CAT_COLORS[activeArticle.category];
+            const sev = getSeverity(activeArticle);
+            const sc = SEV[sev];
+            return (
+              <div style={{
+                position: "absolute",
+                bottom: 24,
+                right: 14,
+                width: 280,
+                background: "rgba(10,11,14,0.92)",
+                border: `1px solid ${color}44`,
+                borderRadius: 10,
+                overflow: "hidden",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
+                zIndex: 20,
+                backdropFilter: "blur(8px)",
+              }}>
+                {/* Image */}
+                {activeArticle.image ? (
+                  <div style={{ width:"100%", height:140, position:"relative", overflow:"hidden" }}>
+                    <img
+                      src={activeArticle.image}
+                      alt=""
+                      style={{ width:"100%", height:"100%", objectFit:"cover" }}
+                      onError={e => { (e.target as HTMLImageElement).parentElement!.style.display="none"; }}
+                    />
+                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, rgba(10,11,14,0.95))" }} />
+                    {/* Severity badge over image */}
+                    <div style={{ position:"absolute", top:10, left:10, display:"flex", gap:5 }}>
+                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, background:sc.bg, border:`1px solid ${sc.border}`, color:sc.text }}>{sev}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}20` }}>{activeArticle.category}</span>
+                    </div>
+                    {/* Flag over image */}
+                    <div style={{ position:"absolute", top:8, right:10, fontSize:20 }}>{FLAGS[activeArticle.country]||""}</div>
+                  </div>
+                ) : (
+                  <div style={{ width:"100%", height:6, background:`linear-gradient(to right, ${color}44, ${color}22)` }} />
+                )}
+
+                <div style={{ padding:"12px 14px 14px" }}>
+                  {/* Title */}
+                  <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.45, marginBottom:8 }}>
+                    {activeArticle.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'")}
+                  </div>
+
+                  {/* Description snippet */}
+                  {activeArticle.description && (
+                    <div style={{ fontSize:11, color:"#94a3b8", lineHeight:1.55, marginBottom:10 }}>
+                      {activeArticle.description.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/<[^>]+>/g,'').slice(0,120)}…
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568" }}>{activeArticle.source}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#2d3748" }}>·</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568" }}>{activeArticle.ago}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button
+                        onClick={() => setActiveArticle(null)}
+                        style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568", background:"transparent", border:"1px solid #1e2533", padding:"3px 8px", borderRadius:3, cursor:"pointer" }}
+                      >✕</button>
+                      <a
+                        href={activeArticle.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontFamily:"monospace", fontSize:9, color, border:`1px solid ${color}44`, padding:"3px 10px", borderRadius:3, textDecoration:"none", fontWeight:600 }}
+                      >READ →</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Legend */}
           <div style={{
             position:"absolute", bottom:20, left:14, pointerEvents:"none",
