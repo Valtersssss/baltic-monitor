@@ -45,6 +45,99 @@ const SEV = {
   LOW:    { dot:"#3b82f6", bg:"rgba(59,130,246,0.08)",  border:"rgba(59,130,246,0.25)", text:"#93c5fd" },
 };
 
+const FLAGS: Record<string, string> = {
+  EE: "🇪🇪",
+  LV: "🇱🇻", 
+  LT: "🇱🇹",
+};
+
+function AlertTicker({ articles }: { articles: Article[] }) {
+  const urgent = articles.filter(a => 
+    getSeverity(a) === "HIGH" || a.category === "MIL" || a.category === "NATO"
+  ).slice(0, 10);
+
+  if (urgent.length === 0) return null;
+
+  const items = [...urgent, ...urgent]; // duplicate for seamless loop
+
+  return (
+    <div style={{
+      height: 32, flexShrink: 0,
+      background: "#1a0a0a",
+      borderBottom: "1px solid rgba(239,68,68,0.4)",
+      display: "flex", alignItems: "center",
+      overflow: "hidden",
+      position: "relative",
+    }}>
+      {/* BREAKING label */}
+      <div style={{
+        flexShrink: 0,
+        background: "#ef4444",
+        color: "#fff",
+        fontFamily: "monospace",
+        fontSize: 10,
+        fontWeight: 700,
+        padding: "0 12px",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        letterSpacing: "0.1em",
+        zIndex: 2,
+      }}>
+        ⚡ ALERT
+      </div>
+
+      {/* Scrolling ticker */}
+      <div style={{
+        flex: 1,
+        overflow: "hidden",
+        position: "relative",
+        maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
+      }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          whiteSpace: "nowrap",
+          animation: `ticker-scroll ${urgent.length * 8}s linear infinite`,
+          gap: 0,
+        }}>
+          {items.map((a, i) => {
+            const color = CAT_COLORS[a.category];
+            const sev = getSeverity(a);
+            return (
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0 24px" }}>
+                <span style={{ fontSize: 14 }}>{FLAGS[a.country] || "🌍"}</span>
+                <span style={{
+                  fontFamily: "monospace", fontSize: 9, fontWeight: 700,
+                  padding: "1px 5px", borderRadius: 2,
+                  color, border: `1px solid ${color}55`, background: `${color}20`,
+                }}>{a.category}</span>
+                {sev === "HIGH" && (
+                  <span style={{
+                    fontFamily: "monospace", fontSize: 8, fontWeight: 700,
+                    padding: "1px 4px", borderRadius: 2,
+                    background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.5)",
+                    color: "#fca5a5",
+                  }}>HIGH</span>
+                )}
+                <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 500 }}>{a.title}</span>
+                <span style={{ color: "rgba(239,68,68,0.4)", fontSize: 12, marginLeft: 8 }}>///</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes ticker-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [articles, setArticles]           = useState<Article[]>([]);
   const [vessels, setVessels]             = useState<Vessel[]>([]);
@@ -160,6 +253,9 @@ export default function Dashboard() {
         </div>
         <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
       </header>
+
+      {/* ALERT TICKER */}
+      <AlertTicker articles={filtered} />
 
       {/* FILTER BAR */}
       <div style={{
@@ -315,76 +411,90 @@ export default function Dashboard() {
             );
           })()}
 
+          {/* HIGH ALERTS SECTION */}
+          {filtered.filter(a => getSeverity(a) === "HIGH").length > 0 && (
+            <div style={{ flexShrink:0, borderBottom:"1px solid rgba(239,68,68,0.3)", background:"rgba(239,68,68,0.04)" }}>
+              <div style={{ padding:"8px 16px 6px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:"monospace", fontSize:9, color:"#ef4444", letterSpacing:"0.15em", fontWeight:700 }}>⚡ HIGH PRIORITY</span>
+                <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(239,68,68,0.6)" }}>{filtered.filter(a=>getSeverity(a)==="HIGH").length}</span>
+              </div>
+              {filtered.filter(a=>getSeverity(a)==="HIGH").slice(0,3).map((article, i) => {
+                const color = CAT_COLORS[article.category];
+                const cc = COUNTRY_COLORS[article.country] || "#64748b";
+                const isActive = activeArticle?.id===article.id && activeArticle?.country===article.country;
+                return (
+                  <div key={i} onClick={() => setActiveArticle(isActive ? null : article)}
+                    style={{
+                      padding:"8px 16px 10px",
+                      borderBottom:"1px solid rgba(239,68,68,0.15)",
+                      cursor:"pointer",
+                      background: isActive ? "rgba(239,68,68,0.1)" : "transparent",
+                      borderLeft:`3px solid ${isActive ? "#ef4444" : "rgba(239,68,68,0.4)"}`,
+                      transition:"background 0.1s",
+                    }}
+                    onMouseEnter={e=>{ (e.currentTarget as HTMLDivElement).style.background="rgba(239,68,68,0.08)"; }}
+                    onMouseLeave={e=>{ (e.currentTarget as HTMLDivElement).style.background=isActive?"rgba(239,68,68,0.1)":"transparent"; }}
+                  >
+                    <div style={{ display:"flex", gap:5, marginBottom:4, alignItems:"center" }}>
+                      <span style={{ fontSize:12 }}>{FLAGS[article.country]||"🌍"}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}15` }}>{article.category}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(239,68,68,0.7)", marginLeft:"auto" }}>{article.ago}</span>
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{article.title}</div>
+                    <div style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)", marginTop:3 }}>{article.source}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Feed header */}
-          <div style={{ padding:"10px 16px", borderBottom:"1px solid var(--border)", flexShrink:0, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", letterSpacing:"0.15em" }}>INCIDENT FEED</span>
-            <span style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)" }}>{filtered.length} events</span>
+          <div style={{ padding:"8px 16px", borderBottom:"1px solid var(--border)", flexShrink:0, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", letterSpacing:"0.15em" }}>ALL EVENTS</span>
+            <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)" }}>{filtered.length}</span>
           </div>
 
-          {/* Article list */}
+          {/* Compact article list */}
           <div style={{ flex:1, overflowY:"auto" }}>
             {filtered.length === 0 ? (
-              <div style={{ padding:32, fontFamily:"monospace", fontSize:12, color:"var(--text-muted)", textAlign:"center" }}>No events</div>
+              <div style={{ padding:24, fontFamily:"monospace", fontSize:11, color:"var(--text-muted)", textAlign:"center" }}>No events</div>
             ) : filtered.slice(0,60).map((article, i) => {
               const sev = getSeverity(article);
               const sc = SEV[sev];
               const color = CAT_COLORS[article.category];
               const cc = COUNTRY_COLORS[article.country] || "#64748b";
               const isActive = activeArticle?.id===article.id && activeArticle?.country===article.country;
-
               return (
                 <div
                   key={article.id+article.country+i}
                   onClick={() => setActiveArticle(isActive ? null : article)}
                   style={{
-                    display:"flex", gap:12,
-                    padding:"12px 16px",
+                    padding:"8px 16px",
                     borderBottom:"1px solid var(--border)",
                     cursor:"pointer",
                     background: isActive ? `${color}0e` : "transparent",
                     borderLeft:`3px solid ${isActive ? color : "transparent"}`,
                     transition:"background 0.1s",
+                    display:"flex", gap:10, alignItems:"flex-start",
                   }}
                   onMouseEnter={e=>{ if(!isActive)(e.currentTarget as HTMLDivElement).style.background="var(--bg-tertiary)"; }}
                   onMouseLeave={e=>{ if(!isActive)(e.currentTarget as HTMLDivElement).style.background="transparent"; }}
                 >
-                  {/* Thumbnail */}
-                  {article.image && (
-                    <div style={{ width:56, height:56, borderRadius:4, overflow:"hidden", flexShrink:0, background:"var(--bg-elevated)" }}>
-                      <img
-                        src={article.image}
-                        alt=""
-                        style={{ width:"100%", height:"100%", objectFit:"cover", opacity:0.85 }}
-                        onError={e=>{ (e.target as HTMLImageElement).parentElement!.style.display="none"; }}
-                      />
-                    </div>
-                  )}
+                  {/* Severity dot */}
+                  <div style={{ width:6, height:6, borderRadius:"50%", background:sc.dot, flexShrink:0, marginTop:4 }} />
 
                   <div style={{ flex:1, minWidth:0 }}>
-                    {/* Badges row */}
-                    <div style={{ display:"flex", gap:4, marginBottom:5, alignItems:"center", flexWrap:"wrap" }}>
-                      <div style={{ width:6, height:6, borderRadius:"50%", background:sc.dot, flexShrink:0 }} />
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}15` }}>
-                        {article.category}
-                      </span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:3, color:cc, border:`1px solid ${cc}44`, background:`${cc}12` }}>
-                        {article.country}
-                      </span>
-                      {sev==="HIGH" && (
-                        <span style={{ fontFamily:"monospace", fontSize:8, fontWeight:700, padding:"1px 4px", borderRadius:2, background:sc.bg, border:`1px solid ${sc.border}`, color:sc.text }}>HIGH</span>
-                      )}
+                    {/* Badges */}
+                    <div style={{ display:"flex", gap:4, marginBottom:3, alignItems:"center" }}>
+                      <span style={{ fontSize:10 }}>{FLAGS[article.country]||""}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 4px", borderRadius:2, color, border:`1px solid ${color}44`, background:`${color}15` }}>{article.category}</span>
                       <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", marginLeft:"auto" }}>{article.ago}</span>
                     </div>
-
-                    {/* Title */}
-                    <div style={{ fontSize:12, fontWeight:500, color:"#f0f4f8", lineHeight:1.4, marginBottom:3 }}>
+                    {/* Title — compact */}
+                    <div style={{ fontSize:12, fontWeight:500, color:"#e2e8f0", lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
                       {article.title}
                     </div>
-
-                    {/* Source */}
-                    <div style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)" }}>
-                      {article.source}
-                    </div>
+                    <div style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", marginTop:2 }}>{article.source}</div>
                   </div>
                 </div>
               );
