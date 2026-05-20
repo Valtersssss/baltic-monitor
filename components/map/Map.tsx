@@ -194,15 +194,17 @@ export default function Map({
             layout: {
               "text-field": ["get", "label"],
               "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-              "text-size": 10,
-              "text-letter-spacing": 0.1,
+              "text-size": 11,
+              "text-letter-spacing": 0.08,
               "text-anchor": "center",
+              "text-allow-overlap": true,
+              "text-ignore-placement": true,
             },
             paint: {
               "text-color": ["get", "color"],
-              "text-halo-color": "rgba(0,0,0,0.8)",
-              "text-halo-width": 2,
-              "text-opacity": resolved ? 0.5 : 0.9,
+              "text-halo-color": "rgba(0,0,0,0.9)",
+              "text-halo-width": 2.5,
+              "text-opacity": resolved ? 0.5 : 1,
             },
           });
         }
