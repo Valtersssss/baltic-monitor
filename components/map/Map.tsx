@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { Article, Vessel } from "@/types";
-import { geolocate } from "@/lib/constants";
+import { geolocate, resetGeolocate } from "@/lib/constants";
 
 interface MapProps {
   articles: Article[];
@@ -15,6 +15,42 @@ interface MapProps {
 }
 
 const MAPTILER_KEY = "WFSUficgIql925bRAF0e";
+
+// Keywords that trigger threat zones
+const THREAT_KEYWORDS = ["drone","airspace","missile","threat alert","air alert","uav","airspace alert","airspace warning","flying object","air threat","airspace closed","no-fly"];
+const RESOLVED_KEYWORDS = ["over","resolved","lifted","ended","cleared","false alarm","cancelled"];
+
+function isThreatArticle(article: Article): boolean {
+  const text = (article.title + " " + article.description).toLowerCase();
+  return THREAT_KEYWORDS.some(k => text.includes(k));
+}
+
+function isResolved(article: Article): boolean {
+  const text = (article.title + " " + article.description).toLowerCase();
+  return RESOLVED_KEYWORDS.some(k => text.includes(k));
+}
+
+function getZoneColor(article: Article): { fill: string; stroke: string; opacity: number } {
+  const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
+  if (isResolved(article)) return { fill: "#f59e0b", stroke: "#f59e0b", opacity: 0.12 };
+  if (hoursAgo < 2) return { fill: "#ef4444", stroke: "#ef4444", opacity: 0.18 };
+  if (hoursAgo < 6) return { fill: "#f97316", stroke: "#f97316", opacity: 0.14 };
+  return { fill: "#f59e0b", stroke: "#f59e0b", opacity: 0.1 };
+}
+
+// Create a GeoJSON circle polygon
+function makeCircle(lng: number, lat: number, radiusKm: number): number[][] {
+  const points = 64;
+  const coords = [];
+  for (let i = 0; i <= points; i++) {
+    const angle = (i * 360) / points;
+    const rad = (angle * Math.PI) / 180;
+    const dlng = (radiusKm / (111.32 * Math.cos((lat * Math.PI) / 180))) * Math.cos(rad);
+    const dlat = (radiusKm / 110.574) * Math.sin(rad);
+    coords.push([lng + dlng, lat + dlat]);
+  }
+  return coords;
+}
 const VESSELS_SOURCE = "vessels";
 const VESSELS_LAYER = "vessel-circles";
 
@@ -47,6 +83,70 @@ export default function Map({
   const mapRef = useRef<any>(null);
   const isLoadedRef = useRef(false);
   const activeMarkerRef = useRef<any>(null);
+
+  const updateThreatZones = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !isLoadedRef.current) return;
+
+    const threatArticles = articles.filter(isThreatArticle);
+
+    // Remove old zones
+    try {
+      for (let i = 0; i < 20; i++) {
+        if (map.getLayer(`threat-fill-${i}`)) map.removeLayer(`threat-fill-${i}`);
+        if (map.getLayer(`threat-stroke-${i}`)) map.removeLayer(`threat-stroke-${i}`);
+        if (map.getSource(`threat-${i}`)) map.removeSource(`threat-${i}`);
+      }
+    } catch(e) {}
+
+    resetGeolocate();
+    threatArticles.slice(0, 10).forEach((article, i) => {
+      const [lng, lat] = geolocate(article.title, article.description, article.country);
+      const { fill, stroke, opacity } = getZoneColor(article);
+      const resolved = isResolved(article);
+      const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
+      const radius = hoursAgo < 1 ? 35 : 22;
+
+      const circle = makeCircle(lng, lat, radius);
+      const geojson = {
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [circle] },
+        properties: {},
+      };
+
+      const srcId = `threat-${i}`;
+      try {
+        if (!map.getSource(srcId)) {
+          map.addSource(srcId, { type: "geojson", data: geojson as any });
+        } else {
+          (map.getSource(srcId) as any).setData(geojson);
+        }
+
+        if (!map.getLayer(`threat-fill-${i}`)) {
+          map.addLayer({
+            id: `threat-fill-${i}`,
+            type: "fill",
+            source: srcId,
+            paint: { "fill-color": fill, "fill-opacity": opacity },
+          });
+        }
+
+        if (!map.getLayer(`threat-stroke-${i}`)) {
+          map.addLayer({
+            id: `threat-stroke-${i}`,
+            type: "line",
+            source: srcId,
+            paint: {
+              "line-color": stroke,
+              "line-width": resolved ? 1.5 : 2.5,
+              "line-opacity": resolved ? 0.5 : 0.9,
+              "line-dasharray": resolved ? [4, 3] : [1],
+            },
+          });
+        }
+      } catch(e) { console.error("Zone error:", e); }
+    });
+  }, [articles]);
 
   const updateVessels = useCallback(() => {
     const map = mapRef.current;
@@ -232,6 +332,7 @@ export default function Map({
 
   useEffect(() => { initMap(); }, [initMap]);
   useEffect(() => { updateVessels(); }, [updateVessels]);
+  useEffect(() => { updateThreatZones(); }, [updateThreatZones]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
