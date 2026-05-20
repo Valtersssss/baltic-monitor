@@ -354,8 +354,9 @@ export default function Dashboard() {
               <div style={{
                 position: "absolute",
                 bottom: 24,
-                right: 14,
-                width: 280,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 320,
                 background: "rgba(10,11,14,0.92)",
                 border: `1px solid ${color}44`,
                 borderRadius: 10,
@@ -457,19 +458,6 @@ export default function Dashboard() {
             const cc = COUNTRY_COLORS[activeArticle.country] || "var(--text-muted)";
             return (
               <div style={{ flexShrink:0, borderBottom:"1px solid var(--border-accent)", background:"var(--bg-tertiary)", position:"relative" }}>
-                {/* Article image */}
-                {activeArticle.image && (
-                  <div style={{ width:"100%", height:160, overflow:"hidden", position:"relative" }}>
-                    <img
-                      src={activeArticle.image}
-                      alt=""
-                      style={{ width:"100%", height:"100%", objectFit:"cover", opacity:0.85 }}
-                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, var(--bg-tertiary))" }} />
-                  </div>
-                )}
-
                 <div style={{ padding:"12px 16px 14px" }}>
                   {/* Badges */}
                   <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
@@ -604,7 +592,7 @@ export default function Dashboard() {
                   onMouseLeave={e=>{ if(!isActive)(e.currentTarget as HTMLDivElement).style.background="transparent"; }}
                 >
                   {/* Severity dot */}
-                  <div style={{ width:6, height:6, borderRadius:"50%", background:sc.dot, flexShrink:0, marginTop:4 }} />
+                  <div style={{ width:6, height:6, borderRadius:"50%", background:sc.dot, flexShrink:0, marginTop:5 }} />
 
                   <div style={{ flex:1, minWidth:0 }}>
                     {/* Badges */}
