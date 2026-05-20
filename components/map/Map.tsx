@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { Article, Vessel } from "@/types";
+import { geolocate } from "@/lib/constants";
 
 interface MapProps {
   articles: Article[];
@@ -45,6 +46,7 @@ export default function Map({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const isLoadedRef = useRef(false);
+  const activeMarkerRef = useRef<any>(null);
 
   const updateVessels = useCallback(() => {
     const map = mapRef.current;
@@ -162,12 +164,70 @@ export default function Map({
     map.flyTo({ center: centre, zoom, duration: 800 });
   }, [focusCountry]);
 
-  // Fly to active article's country
+  // Fly to article location and show pulsing marker
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !isLoadedRef.current || !activeArticle) return;
-    const centre = COUNTRY_CENTRES[activeArticle.country];
-    if (centre) map.flyTo({ center: centre, zoom: 7.5, duration: 800 });
+    if (!map || !isLoadedRef.current) return;
+
+    // Remove old marker
+    if (activeMarkerRef.current) {
+      activeMarkerRef.current.remove();
+      activeMarkerRef.current = null;
+    }
+
+    if (!activeArticle) return;
+
+    const [lng, lat] = geolocate(activeArticle.title, activeArticle.description, activeArticle.country);
+
+    // Fly to article location
+    map.flyTo({ center: [lng, lat], zoom: 8, duration: 900 });
+
+    // Create pulsing marker element
+    import("@maptiler/sdk").then(({ Marker }) => {
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width: 20px;
+        height: 20px;
+        position: relative;
+      `;
+
+      const ring = document.createElement("div");
+      ring.style.cssText = `
+        position: absolute;
+        inset: -8px;
+        border-radius: 50%;
+        border: 2px solid white;
+        opacity: 0.5;
+        animation: ping 1.5s ease-out infinite;
+      `;
+
+      const dot = document.createElement("div");
+      dot.style.cssText = `
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid rgba(0,0,0,0.3);
+        box-shadow: 0 0 12px rgba(255,255,255,0.6);
+      `;
+
+      // Add keyframe animation
+      if (!document.getElementById("ping-style")) {
+        const style = document.createElement("style");
+        style.id = "ping-style";
+        style.textContent = `@keyframes ping { 0% { transform: scale(0.8); opacity: 0.6; } 100% { transform: scale(2.5); opacity: 0; } }`;
+        document.head.appendChild(style);
+      }
+
+      el.appendChild(ring);
+      el.appendChild(dot);
+
+      const marker = new Marker({ element: el, anchor: "center" })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      activeMarkerRef.current = marker;
+    });
   }, [activeArticle]);
 
   useEffect(() => { initMap(); }, [initMap]);
