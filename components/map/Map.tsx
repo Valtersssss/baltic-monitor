@@ -18,35 +18,52 @@ const MAPTILER_KEY = "WFSUficgIql925bRAF0e";
 
 // Keywords that trigger threat zones
 const THREAT_KEYWORDS = ["drone","airspace","missile","threat alert","air alert","uav","airspace alert","airspace warning","flying object","air threat","airspace closed","no-fly"];
-const RESOLVED_KEYWORDS = ["over","resolved","lifted","ended","cleared","false alarm","cancelled"];
+const EXPLICIT_RESOLVED = ["alert lifted","all clear","airspace reopened","threat is over","alert is over","alert ended","alert cancelled","alert cleared"];
 
 function isThreatArticle(article: Article): boolean {
   const text = (article.title + " " + article.description).toLowerCase();
   return THREAT_KEYWORDS.some(k => text.includes(k));
 }
 
-function isResolved(article: Article): boolean {
+function getAgeHours(article: Article): number {
+  return (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
+}
+
+function isExplicitlyResolved(article: Article): boolean {
   const text = (article.title + " " + article.description).toLowerCase();
-  return RESOLVED_KEYWORDS.some(k => text.includes(k));
+  return EXPLICIT_RESOLVED.some(k => text.includes(k));
 }
 
-function getZoneColor(article: Article): { fill: string; stroke: string; fillOpacity: number; strokeOpacity: number } {
-  const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
-  if (isResolved(article)) return { fill: "#94a3b8", stroke: "#94a3b8", fillOpacity: 0.06, strokeOpacity: 0.4 };
-  if (hoursAgo < 2) return { fill: "#ef4444", stroke: "#ef4444", fillOpacity: 0.12, strokeOpacity: 0.9 };
-  if (hoursAgo < 6) return { fill: "#ef4444", stroke: "#f97316", fillOpacity: 0.08, strokeOpacity: 0.6 };
-  return { fill: "#f59e0b", stroke: "#f59e0b", fillOpacity: 0.05, strokeOpacity: 0.4 };
+// Time-based decay — no guessing from ambiguous keywords
+function getZoneState(article: Article): "active" | "aging" | "old" | "resolved" {
+  if (isExplicitlyResolved(article)) return "resolved";
+  const h = getAgeHours(article);
+  if (h < 2)  return "active";
+  if (h < 6)  return "aging";
+  if (h < 12) return "old";
+  return "resolved"; // auto-expire after 12h
 }
 
-// Deduplicate threat articles by location proximity
+function getZoneStyle(article: Article): { fill: string; stroke: string; fillOpacity: number; strokeOpacity: number; dash: boolean; label: string; labelColor: string } {
+  const state = getZoneState(article);
+  const h = getAgeHours(article);
+  switch(state) {
+    case "active":   return { fill:"#ef4444", stroke:"#ef4444", fillOpacity:0.12, strokeOpacity:0.9,  dash:false, label:"⚠ DRONE ALERT",        labelColor:"#ef4444" };
+    case "aging":    return { fill:"#f97316", stroke:"#f97316", fillOpacity:0.07, strokeOpacity:0.6,  dash:false, label:`⚠ ALERT · ${Math.round(h)}h ago`, labelColor:"#f97316" };
+    case "old":      return { fill:"#f59e0b", stroke:"#f59e0b", fillOpacity:0.04, strokeOpacity:0.35, dash:true,  label:`· ${Math.round(h)}h ago`,  labelColor:"#64748b" };
+    case "resolved": return { fill:"#64748b", stroke:"#64748b", fillOpacity:0.02, strokeOpacity:0.2,  dash:true,  label:"",                         labelColor:"#64748b" };
+  }
+}
+
+// Deduplicate threat articles by location proximity — keep most recent
 function deduplicateThreats(articles: Article[]): Article[] {
+  const sorted = [...articles].sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
   const result: Article[] = [];
   const used: Array<[number, number]> = [];
-  for (const article of articles) {
+  for (const article of sorted) {
     const [lng, lat] = geolocate(article.title, article.description, article.country);
     const tooClose = used.some(([ulng, ulat]) => {
-      const dist = Math.sqrt(Math.pow(lng - ulng, 2) + Math.pow(lat - ulat, 2));
-      return dist < 0.3; // ~30km
+      return Math.sqrt(Math.pow(lng - ulng, 2) + Math.pow(lat - ulat, 2)) < 0.3;
     });
     if (!tooClose) {
       result.push(article);
@@ -123,9 +140,10 @@ export default function Map({
     const dedupedThreats = deduplicateThreats(threatArticles);
     dedupedThreats.slice(0, 10).forEach((article, i) => {
       const [lng, lat] = geolocate(article.title, article.description, article.country);
-      const { fill, stroke, fillOpacity, strokeOpacity } = getZoneColor(article);
-      const resolved = isResolved(article);
-      const hoursAgo = (Date.now() - new Date(article.pubDate).getTime()) / 3600000;
+      const { fill, stroke, fillOpacity, strokeOpacity, dash, label, labelColor } = getZoneStyle(article);
+      const state = getZoneState(article);
+      if (state === "resolved") return; // don't draw expired zones
+      const hoursAgo = getAgeHours(article);
       const radius = hoursAgo < 1 ? 35 : 22;
 
       const circle = makeCircle(lng, lat, radius);
@@ -151,23 +169,22 @@ export default function Map({
             source: srcId,
             paint: {
               "fill-color": fill,
-              "fill-opacity": resolved ? 0.04 : fillOpacity,
-              "fill-pattern": undefined,
+              "fill-opacity": fillOpacity,
             },
           });
         }
 
-        // Border — solid red for active, dashed gray for resolved
+        // Border
         if (!map.getLayer(`threat-stroke-${i}`)) {
           map.addLayer({
             id: `threat-stroke-${i}`,
             type: "line",
             source: srcId,
             paint: {
-              "line-color": resolved ? "#64748b" : stroke,
-              "line-width": resolved ? 1 : 2,
-              "line-opacity": resolved ? 0.3 : strokeOpacity,
-              "line-dasharray": resolved ? [4, 4] : [1],
+              "line-color": stroke,
+              "line-width": state === "active" ? 2 : 1.5,
+              "line-opacity": strokeOpacity,
+              "line-dasharray": dash ? [4, 4] : [1],
             },
           });
         }
@@ -178,10 +195,7 @@ export default function Map({
         const labelGeojson = {
           type: "Feature",
           geometry: { type: "Point", coordinates: [lng, lat] },
-          properties: {
-            label: resolved ? "✓ CLEARED" : "⚠ DRONE ALERT",
-            color: resolved ? "#64748b" : "#ef4444",
-          },
+          properties: { label, color: labelColor },
         };
         if (!map.getSource(labelSrcId)) {
           map.addSource(labelSrcId, { type: "geojson", data: labelGeojson as any });
@@ -204,7 +218,7 @@ export default function Map({
               "text-color": ["get", "color"],
               "text-halo-color": "rgba(0,0,0,0.9)",
               "text-halo-width": 2.5,
-              "text-opacity": resolved ? 0.5 : 1,
+              "text-opacity": label ? 1 : 0,
             },
           });
         }
