@@ -120,7 +120,7 @@ function AlertTicker({ articles }: { articles: Article[] }) {
                     color: "#fca5a5",
                   }}>HIGH</span>
                 )}
-                <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 500 }}>{a.title}</span>
+                <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 500 }}>{a.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'")}</span>
                 <span style={{ color: "rgba(239,68,68,0.4)", fontSize: 12, marginLeft: 8 }}>///</span>
               </span>
             );
@@ -146,6 +146,7 @@ export default function Dashboard() {
   const [filterCat, setFilterCat]         = useState<Category | "ALL">("ALL");
   const [filterCountry, setFilterCountry] = useState<Country>("ALL");
   const [time, setTime]                   = useState("");
+  const [feedTab, setFeedTab]             = useState<"ALL"|"HIGH"|"MIL"|"NATO">("ALL");
   const wsRef                             = useRef<WebSocket | null>(null);
 
   const filtered = articles.filter(a => {
@@ -259,50 +260,74 @@ export default function Dashboard() {
 
       {/* FILTER BAR */}
       <div style={{
-        height:40, flexShrink:0, background:"#0a0b0e",
-        borderBottom:"1px solid var(--border)",
-        display:"flex", alignItems:"center", padding:"0 16px", gap:2, overflowX:"auto",
+        height: 44, flexShrink: 0,
+        background: "#0d0f14",
+        borderBottom: "1px solid var(--border-accent)",
+        display: "flex", alignItems: "center",
+        padding: "0 20px", gap: 0,
+        overflowX: "auto",
       }}>
-        {CATEGORIES.map(({ key, label }) => {
-          const active = filterCat === key;
-          const color = key !== "ALL" ? CAT_COLORS[key as Category] : "#fff";
-          return (
-            <button key={key} onClick={() => setFilterCat(key)} style={{
-              padding:"4px 14px", borderRadius:4, border:"none",
-              background: active ? `${color}18` : "transparent",
-              color: active ? color : "var(--text-muted)",
-              fontFamily:"monospace", fontSize:11, fontWeight: active ? 700 : 400,
-              cursor:"pointer", letterSpacing:"0.05em", whiteSpace:"nowrap",
-              borderBottom:`2px solid ${active ? color : "transparent"}`,
-              transition:"all 0.12s",
-            }}>
-              {label.toUpperCase()}
-            </button>
-          );
-        })}
+        {/* Category filters */}
+        <div style={{ display:"flex", alignItems:"center", gap:2, flex:1 }}>
+          {CATEGORIES.map(({ key, label }) => {
+            const active = filterCat === key;
+            const color = key !== "ALL" ? CAT_COLORS[key as Category] : "#94a3b8";
+            return (
+              <button key={key} onClick={() => setFilterCat(key)} style={{
+                padding: "6px 14px",
+                background: active ? `${color}18` : "transparent",
+                border: "none",
+                borderRadius: 6,
+                color: active ? color : "#4a5568",
+                fontFamily: "monospace",
+                fontSize: 11,
+                fontWeight: active ? 700 : 500,
+                cursor: "pointer",
+                letterSpacing: "0.06em",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s",
+                outline: active ? `1px solid ${color}33` : "none",
+              }}>
+                {label.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
 
-        <div style={{ width:1, height:20, background:"var(--border)", margin:"0 8px", flexShrink:0 }} />
+        {/* Divider */}
+        <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 12px", flexShrink:0 }} />
 
-        {COUNTRIES.map(({ key, label }) => {
-          const active = filterCountry === key;
-          const color = key !== "ALL" ? COUNTRY_COLORS[key] : "#fff";
-          return (
-            <button key={key} onClick={() => setFilterCountry(key)} style={{
-              padding:"4px 12px", borderRadius:4, border:"none",
-              background: active ? `${color}15` : "transparent",
-              color: active ? color : "var(--text-muted)",
-              fontFamily:"monospace", fontSize:11, fontWeight: active ? 700 : 400,
-              cursor:"pointer", whiteSpace:"nowrap",
-              borderBottom:`2px solid ${active ? color : "transparent"}`,
-              transition:"all 0.12s",
-            }}>
-              {label.toUpperCase()}
-            </button>
-          );
-        })}
+        {/* Country filters */}
+        <div style={{ display:"flex", alignItems:"center", gap:2 }}>
+          {COUNTRIES.map(({ key, label }) => {
+            const active = filterCountry === key;
+            const color = key !== "ALL" ? COUNTRY_COLORS[key] : "#94a3b8";
+            const flag = key !== "ALL" ? FLAGS[key] : null;
+            return (
+              <button key={key} onClick={() => setFilterCountry(key)} style={{
+                padding: "5px 12px",
+                background: active ? `${color}18` : "transparent",
+                border: "none",
+                borderRadius: 6,
+                color: active ? color : "#4a5568",
+                fontFamily: "monospace",
+                fontSize: 11,
+                fontWeight: active ? 700 : 500,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.15s",
+                outline: active ? `1px solid ${color}33` : "none",
+                display: "flex", alignItems: "center", gap: 5,
+              }}>
+                {flag && <span style={{ fontSize:13 }}>{flag}</span>}
+                {label.toUpperCase()}
+              </button>
+            );
+          })}
+        </div>
 
-        <span style={{ marginLeft:"auto", fontFamily:"monospace", fontSize:11, color:"var(--text-muted)", flexShrink:0 }}>
-          {filtered.length} events
+        <span style={{ marginLeft:16, fontFamily:"monospace", fontSize:10, color:"#2d3748", flexShrink:0 }}>
+          {filtered.length}
         </span>
       </div>
 
@@ -411,8 +436,22 @@ export default function Dashboard() {
             );
           })()}
 
+          {/* Feed tab switcher */}
+          <div style={{ flexShrink:0, display:"flex", borderBottom:"1px solid var(--border)", background:"var(--bg-primary)" }}>
+            {([["ALL","All"], ["HIGH","🔴 High"], ["MIL","Military"], ["NATO","NATO"]] as const).map(([tab, label]) => (
+              <button key={tab} onClick={() => setFeedTab(tab)} style={{
+                flex:1, padding:"8px 4px",
+                background:"transparent", border:"none",
+                borderBottom:`2px solid ${feedTab===tab ? (tab==="HIGH" ? "#ef4444" : tab==="MIL" ? "#ef4444" : tab==="NATO" ? "#3b82f6" : "var(--accent-blue)") : "transparent"}`,
+                color: feedTab===tab ? "#fff" : "var(--text-muted)",
+                fontFamily:"monospace", fontSize:10, fontWeight: feedTab===tab ? 700 : 400,
+                cursor:"pointer", transition:"all 0.12s", letterSpacing:"0.05em",
+              }}>{label}</button>
+            ))}
+          </div>
+
           {/* HIGH ALERTS SECTION */}
-          {filtered.filter(a => getSeverity(a) === "HIGH").length > 0 && (
+          {feedTab === "ALL" && filtered.filter(a => getSeverity(a) === "HIGH").length > 0 && (
             <div style={{ flexShrink:0, borderBottom:"1px solid rgba(239,68,68,0.3)", background:"rgba(239,68,68,0.04)" }}>
               <div style={{ padding:"8px 16px 6px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                 <span style={{ fontFamily:"monospace", fontSize:9, color:"#ef4444", letterSpacing:"0.15em", fontWeight:700 }}>⚡ HIGH PRIORITY</span>
@@ -440,7 +479,7 @@ export default function Dashboard() {
                       <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}15` }}>{article.category}</span>
                       <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(239,68,68,0.7)", marginLeft:"auto" }}>{article.ago}</span>
                     </div>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{article.title}</div>
+                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}</div>
                     <div style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)", marginTop:3 }}>{article.source}</div>
                   </div>
                 );
@@ -458,7 +497,12 @@ export default function Dashboard() {
           <div style={{ flex:1, overflowY:"auto" }}>
             {filtered.length === 0 ? (
               <div style={{ padding:24, fontFamily:"monospace", fontSize:11, color:"var(--text-muted)", textAlign:"center" }}>No events</div>
-            ) : filtered.slice(0,60).map((article, i) => {
+            ) : filtered.filter(a => {
+                if (feedTab === "HIGH") return getSeverity(a) === "HIGH";
+                if (feedTab === "MIL") return a.category === "MIL";
+                if (feedTab === "NATO") return a.category === "NATO";
+                return true;
+              }).slice(0,60).map((article, i) => {
               const sev = getSeverity(article);
               const sc = SEV[sev];
               const color = CAT_COLORS[article.category];
@@ -492,7 +536,7 @@ export default function Dashboard() {
                     </div>
                     {/* Title — compact */}
                     <div style={{ fontSize:12, fontWeight:500, color:"#e2e8f0", lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-                      {article.title}
+                      {article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
                     </div>
                     <div style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", marginTop:2 }}>{article.source}</div>
                   </div>
