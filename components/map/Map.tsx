@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { Article, Vessel } from "@/types";
-import { CAT_COLORS, geolocate, resetGeolocate } from "@/lib/constants";
 
 interface MapProps {
   articles: Article[];
@@ -11,12 +10,10 @@ interface MapProps {
   activeArticle: Article | null;
   onArticleSelect: (article: Article) => void;
   onArticleHover: (article: Article | null, x: number, y: number) => void;
+  focusCountry?: string | null;
 }
 
 const MAPTILER_KEY = "WFSUficgIql925bRAF0e";
-const SOURCE_ID = "articles";
-const LAYER_ID = "article-circles";
-const LAYER_RING_ID = "article-rings";
 const VESSELS_SOURCE = "vessels";
 const VESSELS_LAYER = "vessel-circles";
 
@@ -32,53 +29,22 @@ const COUNTRY_COLORS: Record<string, string> = {
   LT: "#f6d860",
 };
 
+const COUNTRY_CENTRES: Record<string, [number, number]> = {
+  EE: [25.0, 58.9],
+  LV: [24.8, 56.9],
+  LT: [24.0, 55.4],
+  ALL: [25.0, 57.2],
+};
+
 export default function Map({
   articles,
   vessels,
   activeArticle,
-  onArticleSelect,
-  onArticleHover,
+  focusCountry,
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const isLoadedRef = useRef(false);
-  const articlesRef = useRef<Article[]>([]);
-  articlesRef.current = articles;
-
-  const buildGeoJSON = useCallback((arts: Article[]) => {
-    resetGeolocate(); // reset spiral counts before each render
-    return {
-      type: "FeatureCollection",
-      features: arts.slice(0, 50).map((a) => {
-        const [lng, lat] = geolocate(a.title, a.description, a.country);
-        const color = CAT_COLORS[a.category] || "#64748b";
-        const isActive =
-          activeArticle?.id === a.id && activeArticle?.country === a.country;
-        return {
-          type: "Feature",
-          geometry: { type: "Point", coordinates: [lng, lat] },
-          properties: {
-            id: a.id,
-            country: a.country,
-            title: a.title,
-            source: a.source,
-            ago: a.ago,
-            category: a.category,
-            color,
-            radius: isActive ? 8 : 5,
-            opacity: isActive ? 1 : 0.88,
-          },
-        };
-      }),
-    };
-  }, [activeArticle]);
-
-  const updateArticles = useCallback(() => {
-    const map = mapRef.current;
-    if (!map || !isLoadedRef.current) return;
-    const src = map.getSource(SOURCE_ID);
-    if (src) src.setData(buildGeoJSON(articles) as any);
-  }, [articles, buildGeoJSON]);
 
   const updateVessels = useCallback(() => {
     const map = mapRef.current;
@@ -106,51 +72,33 @@ export default function Map({
         "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"
       );
       const countries: any = topo.feature(world, world.objects.countries);
-      const balticFeatures = countries.features.filter(
-        (f: any) => BALTIC_ISO[String(f.id)]
-      );
 
-      balticFeatures.forEach((f: any) => {
-        const code = BALTIC_ISO[String(f.id)];
-        const color = COUNTRY_COLORS[code];
-        const sourceId = `border-${code}`;
-        const fillId = `fill-${code}`;
-        const lineId = `line-${code}`;
+      countries.features
+        .filter((f: any) => BALTIC_ISO[String(f.id)])
+        .forEach((f: any) => {
+          const code = BALTIC_ISO[String(f.id)];
+          const color = COUNTRY_COLORS[code];
+          const sid = `border-${code}`;
+          const fillId = `fill-${code}`;
+          const lineId = `line-${code}`;
 
-        if (!map.getSource(sourceId)) {
-          map.addSource(sourceId, { type: "geojson", data: f as any });
-        }
-
-        if (!map.getLayer(fillId)) {
-          map.addLayer({
-            id: fillId,
-            type: "fill",
-            source: sourceId,
-            paint: {
-              "fill-color": color,
-              "fill-opacity": 0.03,
-            },
-          });
-        }
-
-        if (!map.getLayer(lineId)) {
-          map.addLayer({
-            id: lineId,
-            type: "line",
-            source: sourceId,
-            paint: {
-              "line-color": color,
-              "line-width": [
-                "interpolate", ["linear"], ["zoom"],
-                4, 1.5,
-                8, 2.5,
-                12, 3.5,
-              ],
-              "line-opacity": 0.75,
-            },
-          });
-        }
-      });
+          if (!map.getSource(sid)) {
+            map.addSource(sid, { type: "geojson", data: f as any });
+          }
+          if (!map.getLayer(fillId)) {
+            map.addLayer({ id: fillId, type: "fill", source: sid,
+              paint: { "fill-color": color, "fill-opacity": 0.04 } });
+          }
+          if (!map.getLayer(lineId)) {
+            map.addLayer({ id: lineId, type: "line", source: sid,
+              paint: {
+                "line-color": color,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 8, 2.5, 12, 3.5],
+                "line-opacity": 0.75,
+              }
+            });
+          }
+        });
     } catch (e) {
       console.error("Border load failed:", e);
     }
@@ -179,50 +127,9 @@ export default function Map({
 
     map.on("load", async () => {
       isLoadedRef.current = true;
-
-      // Add colored country borders first
       await addBorders(map);
 
-      // Article source
-      map.addSource(SOURCE_ID, {
-        type: "geojson",
-        data: buildGeoJSON(articlesRef.current) as any,
-      });
-
-      // Outer ring
-      map.addLayer({
-        id: LAYER_RING_ID,
-        type: "circle",
-        source: SOURCE_ID,
-        paint: {
-          "circle-radius": ["+", ["get", "radius"], 5],
-          "circle-color": "transparent",
-          "circle-stroke-width": 0.8,
-          "circle-stroke-color": ["get", "color"],
-          "circle-stroke-opacity": 0.35,
-        },
-      });
-
-      // Core dot
-      map.addLayer({
-        id: LAYER_ID,
-        type: "circle",
-        source: SOURCE_ID,
-        paint: {
-          "circle-radius": [
-            "interpolate", ["linear"], ["zoom"],
-            4, 3,
-            8, ["get", "radius"],
-            14, ["+", ["get", "radius"], 3],
-          ],
-          "circle-color": ["get", "color"],
-          "circle-opacity": ["get", "opacity"],
-          "circle-stroke-width": 0.5,
-          "circle-stroke-color": "rgba(255,255,255,0.2)",
-        },
-      });
-
-      // Vessels
+      // Vessels only — no article dots
       map.addSource(VESSELS_SOURCE, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] } as any,
@@ -241,41 +148,29 @@ export default function Map({
         },
       });
 
-      // Click
-      map.on("click", LAYER_ID, (e: any) => {
-        const props = e.features?.[0]?.properties;
-        if (!props) return;
-        const art = articlesRef.current.find(
-          (a) => a.id === props.id && a.country === props.country
-        );
-        if (art) onArticleSelect(art);
-      });
-
-      // Hover
-      map.on("mouseenter", LAYER_ID, (e: any) => {
-        map.getCanvas().style.cursor = "pointer";
-        const props = e.features?.[0]?.properties;
-        if (!props) return;
-        const art = articlesRef.current.find(
-          (a) => a.id === props.id && a.country === props.country
-        );
-        if (art && container) {
-          const rect = container.getBoundingClientRect();
-          onArticleHover(art, rect.left + e.point.x, rect.top + e.point.y);
-        }
-      });
-
-      map.on("mouseleave", LAYER_ID, () => {
-        map.getCanvas().style.cursor = "";
-        onArticleHover(null, 0, 0);
-      });
-
       updateVessels();
     });
-  }, [buildGeoJSON, onArticleSelect, onArticleHover, updateVessels, addBorders]);
+  }, [addBorders, updateVessels]);
+
+  // Fly to country when filter changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoadedRef.current) return;
+    const country = focusCountry || "ALL";
+    const centre = COUNTRY_CENTRES[country] || COUNTRY_CENTRES.ALL;
+    const zoom = country === "ALL" ? 6.0 : 7.0;
+    map.flyTo({ center: centre, zoom, duration: 800 });
+  }, [focusCountry]);
+
+  // Fly to active article's country
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isLoadedRef.current || !activeArticle) return;
+    const centre = COUNTRY_CENTRES[activeArticle.country];
+    if (centre) map.flyTo({ center: centre, zoom: 7.5, duration: 800 });
+  }, [activeArticle]);
 
   useEffect(() => { initMap(); }, [initMap]);
-  useEffect(() => { updateArticles(); }, [updateArticles]);
   useEffect(() => { updateVessels(); }, [updateVessels]);
 
   return (

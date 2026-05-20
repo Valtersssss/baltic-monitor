@@ -12,6 +12,7 @@ export interface Article {
   category: Category;
   threatContribution: number;
   ago: string;
+  image?: string;
 }
 
 export interface FeedData {
