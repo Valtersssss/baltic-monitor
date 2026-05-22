@@ -573,10 +573,7 @@ export default function Dashboard() {
                     <div style={{ fontSize:12, fontWeight:500, color:"#e2e8f0", lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
                       {article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#374151" }}>{article.source}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:8, color:"#4b5563", border:"1px solid #1f2937", padding:"0px 4px", borderRadius:2 }}>UNVERIFIED</span>
-                    </div>
+                    <span style={{ fontFamily:"monospace", fontSize:9, color:"#4b5563", marginTop:2, display:"block" }}>{article.source}</span>
                   </div>
                 </div>
               );
