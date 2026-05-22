@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { Article, FeedData, Vessel, Category, Country } from "@/types";
 import { WORKER_URL, AIS_KEY, CAT_COLORS } from "@/lib/constants";
+import Topbar from "@/components/layout/Topbar";
+import ArticlePopup from "@/components/map/ArticlePopup";
 
 const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
 
