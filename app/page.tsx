@@ -146,6 +146,7 @@ export default function Dashboard() {
   const [filterCat, setFilterCat]         = useState<Category | "ALL">("ALL");
   const [filterCountry, setFilterCountry] = useState<Country>("ALL");
   const [time, setTime]                   = useState("");
+  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
   const [feedTab, setFeedTab]             = useState<"ALL"|"HIGH"|"MIL"|"NATO">("ALL");
   const wsRef                             = useRef<WebSocket | null>(null);
 
@@ -172,6 +173,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: FeedData = await res.json();
       setArticles(data.articles || []);
+      setLastUpdated(new Date());
     } catch(e) { console.error(e); }
     finally { setIsLoading(false); }
   }, []);
@@ -208,52 +210,16 @@ export default function Dashboard() {
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--bg-primary)" }}>
 
       {/* TOPBAR */}
-      <header style={{
-        height:48, flexShrink:0, background:"var(--bg-secondary)",
-        borderBottom:"1px solid var(--border-accent)",
-        display:"flex", alignItems:"center", padding:"0 20px", gap:16, zIndex:100,
-      }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <div style={{ width:8, height:8, borderRadius:"50%", background:"#4d9ef7", boxShadow:"0 0 8px #4d9ef799" }} />
-          <span style={{ fontFamily:"monospace", fontSize:13, fontWeight:700, color:"#fff", letterSpacing:"0.1em" }}>
-            BALTIC<span style={{ color:"#4d9ef7" }}>_</span>MONITOR
-          </span>
-        </div>
-
-        <div style={{ width:1, height:24, background:"var(--border-accent)" }} />
-
-        {/* Severity counters */}
-        {highCount > 0 && (
-          <div style={{ display:"flex", alignItems:"center", gap:5, background:SEV.HIGH.bg, border:`1px solid ${SEV.HIGH.border}`, borderRadius:4, padding:"3px 10px" }}>
-            <div style={{ width:6, height:6, borderRadius:"50%", background:SEV.HIGH.dot }} />
-            <span style={{ fontFamily:"monospace", fontSize:10, color:SEV.HIGH.text, fontWeight:700 }}>{highCount} HIGH</span>
-          </div>
-        )}
-        {mediumCount > 0 && (
-          <div style={{ display:"flex", alignItems:"center", gap:5, background:SEV.MEDIUM.bg, border:`1px solid ${SEV.MEDIUM.border}`, borderRadius:4, padding:"3px 10px" }}>
-            <div style={{ width:6, height:6, borderRadius:"50%", background:SEV.MEDIUM.dot }} />
-            <span style={{ fontFamily:"monospace", fontSize:10, color:SEV.MEDIUM.text, fontWeight:700 }}>{mediumCount} MED</span>
-          </div>
-        )}
-
-        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-          <div style={{ width:6, height:6, borderRadius:"50%", background:"#10b981", animation:"pulse 2s infinite" }} />
-          <span style={{ fontFamily:"monospace", fontSize:10, color:"#10b981", letterSpacing:"0.08em" }}>LIVE</span>
-        </div>
-
-        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontFamily:"monospace", fontSize:11, color:"var(--text-muted)" }}>{time}</span>
-          <button onClick={loadFeed} disabled={isLoading} style={{
-            fontFamily:"monospace", fontSize:10,
-            color:isLoading?"var(--text-muted)":"var(--text-secondary)",
-            background:"transparent", border:"1px solid var(--border-accent)",
-            padding:"4px 12px", borderRadius:4, cursor:isLoading?"not-allowed":"pointer",
-          }}>
-            {isLoading ? "LOADING..." : "↻ REFRESH"}
-          </button>
-        </div>
-        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
-      </header>
+      <Topbar
+        eventCount={filtered.length}
+        highCount={highCount}
+        medCount={mediumCount}
+        onRefresh={loadFeed}
+        isLoading={isLoading}
+        lastUpdated={lastUpdated}
+        sources={[]}
+        vesselCount={vessels.length}
+      />
 
       {/* ALERT TICKER */}
       <AlertTicker articles={filtered} />
@@ -605,7 +571,10 @@ export default function Dashboard() {
                     <div style={{ fontSize:12, fontWeight:500, color:"#e2e8f0", lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
                       {article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
                     </div>
-                    <div style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", marginTop:2 }}>{article.source}</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
+                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#374151" }}>{article.source}</span>
+                      <span style={{ fontFamily:"monospace", fontSize:8, color:"#4b5563", border:"1px solid #1f2937", padding:"0px 4px", borderRadius:2 }}>UNVERIFIED</span>
+                    </div>
                   </div>
                 </div>
               );

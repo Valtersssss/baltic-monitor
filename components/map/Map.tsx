@@ -117,7 +117,10 @@ export default function Map({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const isLoadedRef = useRef(false);
+  const vesselsRef = useRef<Vessel[]>([]);
   const activeMarkerRef = useRef<any>(null);
+
+  vesselsRef.current = vessels;
 
   const updateThreatZones = useCallback(() => {
     const map = mapRef.current;
@@ -327,6 +330,53 @@ export default function Map({
           "circle-stroke-color": "rgba(255,255,255,0.3)",
         },
       });
+
+      // Vessel click
+      map.on("click", VESSELS_LAYER, (e: any) => {
+        const props = e.features?.[0]?.properties;
+        if (!props) return;
+        const vessel = vesselsRef.current.find(v => v.mmsi === props.mmsi);
+        if (!vessel) return;
+        // Show vessel popup
+        const el = document.createElement("div");
+        el.style.cssText = `
+          position:fixed;
+          background:#0d1117;
+          border:1px solid rgba(34,211,238,0.3);
+          border-radius:8px;
+          padding:12px 14px;
+          font-family:monospace;
+          font-size:11px;
+          color:#e2e8f0;
+          z-index:1000;
+          pointer-events:auto;
+          box-shadow:0 8px 32px rgba(0,0,0,0.6);
+          min-width:180px;
+        `;
+        el.innerHTML = `
+          <div style="font-size:9px;color:#22d3ee;letter-spacing:0.1em;margin-bottom:6px">AIS · VESSEL</div>
+          <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:8px">${vessel.name}</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">MMSI</span><span>${vessel.mmsi}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">Speed</span><span>${vessel.sog.toFixed(1)} kn</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#4b5563">Position</span><span>${vessel.lat.toFixed(3)}°N ${vessel.lng.toFixed(3)}°E</span></div>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+            <a href="https://www.marinetraffic.com/en/ais/details/ships/mmsi:${vessel.mmsi}" target="_blank"
+              style="font-size:9px;color:#22d3ee;text-decoration:none;border:1px solid rgba(34,211,238,0.25);padding:3px 8px;border-radius:3px">
+              MarineTraffic →
+            </a>
+          </div>
+          <button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:8px;background:none;border:none;color:#4b5563;cursor:pointer;font-size:12px">✕</button>
+        `;
+        el.style.left = (e.originalEvent.clientX + 12) + "px";
+        el.style.top  = (e.originalEvent.clientY - 10) + "px";
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 8000);
+      });
+
+      map.on("mouseenter", VESSELS_LAYER, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", VESSELS_LAYER, () => { map.getCanvas().style.cursor = ""; });
 
       updateVessels();
     });
