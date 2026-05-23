@@ -2,12 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-interface Source {
-  name: string;
-  country: string;
-  active: boolean;
-}
-
 interface TopbarProps {
   eventCount: number;
   highCount: number;
@@ -15,19 +9,18 @@ interface TopbarProps {
   onRefresh: () => void;
   isLoading: boolean;
   lastUpdated: Date | null;
-  sources: Source[];
+  sources: never[];
   vesselCount: number;
 }
 
-const SOURCES: Source[] = [
-  { name: "ERR", country: "EE", active: true },
-  { name: "LSM", country: "LV", active: true },
-  { name: "LRT", country: "LT", active: false },
-  { name: "AIS", country: "—", active: true },
+const SOURCES = [
+  { name: "ERR", active: true },
+  { name: "LSM", active: true },
+  { name: "LRT", active: false },
+  { name: "AIS", active: true },
 ];
 
 export default function Topbar({
-  eventCount,
   highCount,
   medCount,
   onRefresh,
@@ -41,72 +34,70 @@ export default function Topbar({
   useEffect(() => {
     const tick = () => {
       setTime(new Date().toUTCString().slice(17, 25) + " UTC");
-      if (lastUpdated) {
-        setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
-      }
+      if (lastUpdated) setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [lastUpdated]);
 
-  const freshness = secondsAgo === null ? null
-    : secondsAgo < 60 ? { label: "just now", color: "#10b981" }
-    : secondsAgo < 180 ? { label: `${secondsAgo}s ago`, color: "#10b981" }
-    : secondsAgo < 360 ? { label: `${Math.floor(secondsAgo/60)}m ago`, color: "#f59e0b" }
-    : { label: `${Math.floor(secondsAgo/60)}m ago`, color: "#ef4444" };
+  const freshnessLabel = secondsAgo === null ? null
+    : secondsAgo < 60 ? "live"
+    : secondsAgo < 300 ? `${Math.floor(secondsAgo/60)}m ago`
+    : `${Math.floor(secondsAgo/60)}m ago`;
+
+  const freshnessColor = secondsAgo === null ? "#475569"
+    : secondsAgo < 120 ? "#34d399"
+    : secondsAgo < 360 ? "#fbbf24"
+    : "#f87171";
 
   return (
     <header style={{
-      height: 48, flexShrink: 0,
-      background: "#09090d",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
-      display: "flex", alignItems: "center",
-      padding: "0 20px", gap: 0,
+      height: 44,
+      flexShrink: 0,
+      background: "var(--surface-1)",
+      borderBottom: "1px solid var(--border-subtle)",
+      display: "flex",
+      alignItems: "center",
+      padding: "0 18px",
+      gap: 0,
       zIndex: 100,
     }}>
-
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 20 }}>
-        <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#3b82f6" }} />
-        <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "0.1em" }}>
-          BALTIC<span style={{ color: "#3b82f6" }}>_</span>MONITOR
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 24 }}>
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#60a5fa" }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", letterSpacing: "0.06em" }}>
+          BALTIC MONITOR
         </span>
-        <span style={{ fontFamily: "monospace", fontSize: 9, color: "#374151", letterSpacing: "0.08em", marginLeft: 4 }}>
+        <span style={{ fontSize: 9, color: "var(--text-faint)", fontWeight: 500, letterSpacing: "0.08em" }}>
           BETA
         </span>
       </div>
 
-      {/* Divider */}
-      <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.06)", marginRight: 16 }} />
+      <div style={{ width: 1, height: 16, background: "var(--border-subtle)", marginRight: 20 }} />
 
-      {/* Severity counters */}
-      <div style={{ display: "flex", gap: 6, marginRight: 16 }}>
+      {/* Alert counts — only show if present */}
+      <div style={{ display: "flex", gap: 8, marginRight: 20 }}>
         {highCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 4, padding: "3px 8px" }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444" }} />
-            <span style={{ fontFamily: "monospace", fontSize: 10, color: "#fca5a5", fontWeight: 700 }}>{highCount} HIGH</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#f87171" }} />
+            <span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 600 }}>{highCount} critical</span>
           </div>
         )}
         {medCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 4, padding: "3px 8px" }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#f59e0b" }} />
-            <span style={{ fontFamily: "monospace", fontSize: 10, color: "#fcd34d", fontWeight: 700 }}>{medCount} MED</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#fbbf24" }} />
+            <span style={{ fontSize: 11, color: "#fde68a", fontWeight: 500 }}>{medCount} active</span>
           </div>
         )}
       </div>
 
-      {/* Source status pills */}
-      <div style={{ display: "flex", gap: 5, marginRight: 16 }}>
+      {/* Source status */}
+      <div style={{ display: "flex", gap: 10, marginRight: 20 }}>
         {SOURCES.map(src => (
-          <div key={src.name} style={{
-            display: "flex", alignItems: "center", gap: 4,
-            padding: "2px 7px", borderRadius: 3,
-            background: src.active ? "rgba(255,255,255,0.03)" : "transparent",
-            border: `1px solid ${src.active ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.03)"}`,
-          }}>
-            <div style={{ width: 4, height: 4, borderRadius: "50%", background: src.active ? "#10b981" : "#374151" }} />
-            <span style={{ fontFamily: "monospace", fontSize: 9, color: src.active ? "#6b7280" : "#374151", letterSpacing: "0.05em" }}>
+          <div key={src.name} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 4, height: 4, borderRadius: "50%", background: src.active ? "#34d399" : "#2d3748" }} />
+            <span style={{ fontSize: 10, color: src.active ? "var(--text-muted)" : "var(--text-faint)", letterSpacing: "0.04em" }}>
               {src.name}
             </span>
           </div>
@@ -115,39 +106,39 @@ export default function Topbar({
 
       {/* Vessel count */}
       {vesselCount > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, marginRight: 16 }}>
-          <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22d3ee" }} />
-          <span style={{ fontFamily: "monospace", fontSize: 10, color: "#374151" }}>{vesselCount} vessels</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#22d3ee" }} />
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{vesselCount} vessels</span>
         </div>
       )}
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
-        {/* Last updated */}
-        {freshness && (
+      {/* Right side */}
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+        {freshnessLabel && (
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: freshness.color, animation: "pulse 2s infinite" }} />
-            <span style={{ fontFamily: "monospace", fontSize: 10, color: "#374151" }}>
-              updated {freshness.label}
-            </span>
+            <div style={{ width: 4, height: 4, borderRadius: "50%", background: freshnessColor }} />
+            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{freshnessLabel}</span>
           </div>
         )}
 
-        <span style={{ fontFamily: "monospace", fontSize: 11, color: "#374151" }}>{time}</span>
+        <span style={{ fontSize: 10, color: "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
 
-        <button onClick={onRefresh} disabled={isLoading} style={{
-          fontFamily: "monospace", fontSize: 10,
-          color: isLoading ? "#374151" : "#6b7280",
-          background: "transparent",
-          border: "1px solid rgba(255,255,255,0.07)",
-          padding: "4px 10px", borderRadius: 4,
-          cursor: isLoading ? "not-allowed" : "pointer",
-          letterSpacing: "0.05em",
-        }}>
-          {isLoading ? "···" : "↻"}
+        <button
+          onClick={onRefresh}
+          disabled={isLoading}
+          style={{
+            fontSize: 11,
+            color: isLoading ? "var(--text-faint)" : "var(--text-muted)",
+            background: "transparent",
+            border: "1px solid var(--border-subtle)",
+            padding: "3px 10px",
+            borderRadius: 4,
+            cursor: isLoading ? "not-allowed" : "pointer",
+          }}
+        >
+          {isLoading ? "···" : "Refresh"}
         </button>
       </div>
-
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
     </header>
   );
 }

@@ -5,140 +5,299 @@ import dynamic from "next/dynamic";
 import type { Article, FeedData, Vessel, Category, Country } from "@/types";
 import { WORKER_URL, AIS_KEY, CAT_COLORS } from "@/lib/constants";
 import Topbar from "@/components/layout/Topbar";
-import ArticlePopup from "@/components/map/ArticlePopup";
 
 const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
 const CATEGORIES: { key: Category | "ALL"; label: string }[] = [
-  { key: "ALL",    label: "All Events" },
-  { key: "MIL",   label: "Military"   },
-  { key: "NATO",  label: "NATO"       },
-  { key: "CYBER", label: "Cyber"      },
-  { key: "POL",   label: "Politics"   },
-  { key: "ENERGY",label: "Energy"     },
-  { key: "GEN",   label: "General"    },
+  { key: "ALL",    label: "All" },
+  { key: "MIL",   label: "Military" },
+  { key: "NATO",  label: "NATO" },
+  { key: "CYBER", label: "Cyber" },
+  { key: "POL",   label: "Politics" },
+  { key: "ENERGY",label: "Energy" },
+  { key: "GEN",   label: "General" },
 ];
 
-const COUNTRIES: { key: Country; label: string }[] = [
-  { key: "ALL", label: "All"     },
-  { key: "EE",  label: "Estonia" },
-  { key: "LV",  label: "Latvia"  },
-  { key: "LT",  label: "Lithuania" },
+const COUNTRIES: { key: Country; label: string; flag: string }[] = [
+  { key: "ALL", label: "All",       flag: "" },
+  { key: "EE",  label: "Estonia",   flag: "🇪🇪" },
+  { key: "LV",  label: "Latvia",    flag: "🇱🇻" },
+  { key: "LT",  label: "Lithuania", flag: "🇱🇹" },
 ];
 
 const COUNTRY_COLORS: Record<string, string> = {
-  EE: "#4d9ef7",
-  LV: "#f56565",
-  LT: "#f6d860",
+  EE: "#4a90d9",
+  LV: "#d94a4a",
+  LT: "#d9b84a",
 };
 
-function getSeverity(article: Article): "HIGH" | "MEDIUM" | "LOW" {
-  const text = (article.title + " " + article.description).toLowerCase();
-  const high = ["attack","missile","threat","alert","emergency","critical","strike","invasion","breach","explosion","drills","escalat","intercept","warning","armed"];
-  const medium = ["military","nato","defense","defence","sanction","cyber","border","exercise","deploy","security","troops","vessel"];
-  if (high.some(k => text.includes(k))) return "HIGH";
-  if (medium.some(k => text.includes(k))) return "MEDIUM";
-  return "LOW";
+const FLAGS: Record<string, string> = { EE: "🇪🇪", LV: "🇱🇻", LT: "🇱🇹" };
+
+// ── Severity ──────────────────────────────────────────────────────────────────
+
+function getSeverity(a: Article): "critical" | "active" | "low" {
+  const t = (a.title + " " + a.description).toLowerCase();
+  const critical = ["attack","missile","explosion","invasion","breach","intercept","airspace violation","infrastructure damage","cable cut","jamming"];
+  const active   = ["drone","alert","military","nato","exercise","troops","deploy","sanction","cyber","border","threat","warning","vessel"];
+  if (critical.some(k => t.includes(k))) return "critical";
+  if (active.some(k => t.includes(k)))   return "active";
+  return "low";
 }
 
-const SEV = {
-  HIGH:   { dot:"#ef4444", bg:"rgba(239,68,68,0.12)",   border:"rgba(239,68,68,0.4)",   text:"#fca5a5" },
-  MEDIUM: { dot:"#f59e0b", bg:"rgba(245,158,11,0.12)",  border:"rgba(245,158,11,0.4)",  text:"#fcd34d" },
-  LOW:    { dot:"#3b82f6", bg:"rgba(59,130,246,0.08)",  border:"rgba(59,130,246,0.25)", text:"#93c5fd" },
+const SEV_STYLES = {
+  critical: { dot: "#f87171", label: "CRITICAL", labelColor: "#fca5a5" },
+  active:   { dot: "#fbbf24", label: "ACTIVE",   labelColor: "#fde68a" },
+  low:      { dot: "#475569", label: "",          labelColor: "#475569" },
 };
 
-const FLAGS: Record<string, string> = {
-  EE: "🇪🇪",
-  LV: "🇱🇻", 
-  LT: "🇱🇹",
-};
+// ── Alert Ticker ──────────────────────────────────────────────────────────────
 
 function AlertTicker({ articles }: { articles: Article[] }) {
-  const urgent = articles.filter(a => 
-    getSeverity(a) === "HIGH" || a.category === "MIL" || a.category === "NATO"
-  ).slice(0, 10);
+  const urgent = articles.filter(a => getSeverity(a) !== "low").slice(0, 8);
+  if (!urgent.length) return null;
 
-  if (urgent.length === 0) return null;
-
-  const items = [...urgent, ...urgent]; // duplicate for seamless loop
-
+  const items = [...urgent, ...urgent];
   return (
     <div style={{
-      height: 32, flexShrink: 0,
-      background: "#1a0a0a",
-      borderBottom: "1px solid rgba(239,68,68,0.4)",
+      height: 28, flexShrink: 0,
+      background: "rgba(248,113,113,0.06)",
+      borderBottom: "1px solid rgba(248,113,113,0.15)",
       display: "flex", alignItems: "center",
       overflow: "hidden",
-      position: "relative",
     }}>
-      {/* BREAKING label */}
       <div style={{
         flexShrink: 0,
-        background: "#ef4444",
+        background: "#f87171",
         color: "#fff",
-        fontFamily: "monospace",
-        fontSize: 10,
-        fontWeight: 700,
-        padding: "0 12px",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
+        fontSize: 9, fontWeight: 700,
+        padding: "0 10px", height: "100%",
+        display: "flex", alignItems: "center",
         letterSpacing: "0.1em",
-        zIndex: 2,
       }}>
-        ⚡ ALERT
+        ALERT
       </div>
-
-      {/* Scrolling ticker */}
-      <div style={{
-        flex: 1,
-        overflow: "hidden",
-        position: "relative",
-        maskImage: "linear-gradient(to right, transparent, black 5%, black 95%, transparent)",
-      }}>
+      <div style={{ flex: 1, overflow: "hidden", maskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)" }}>
         <div style={{
-          display: "flex",
-          alignItems: "center",
+          display: "flex", alignItems: "center",
           whiteSpace: "nowrap",
-          animation: `ticker-scroll ${urgent.length * 8}s linear infinite`,
-          gap: 0,
+          animation: `ticker ${urgent.length * 7}s linear infinite`,
         }}>
           {items.map((a, i) => {
             const color = CAT_COLORS[a.category];
-            const sev = getSeverity(a);
             return (
-              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0 24px" }}>
-                <span style={{ fontSize: 14 }}>{FLAGS[a.country] || "🌍"}</span>
-                <span style={{
-                  fontFamily: "monospace", fontSize: 9, fontWeight: 700,
-                  padding: "1px 5px", borderRadius: 2,
-                  color, border: `1px solid ${color}55`, background: `${color}20`,
-                }}>{a.category}</span>
-                {sev === "HIGH" && (
-                  <span style={{
-                    fontFamily: "monospace", fontSize: 8, fontWeight: 700,
-                    padding: "1px 4px", borderRadius: 2,
-                    background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.5)",
-                    color: "#fca5a5",
-                  }}>HIGH</span>
-                )}
-                <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 500 }}>{a.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'")}</span>
-                <span style={{ color: "rgba(239,68,68,0.4)", fontSize: 12, marginLeft: 8 }}>///</span>
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0 20px" }}>
+                <span style={{ fontSize: 12 }}>{FLAGS[a.country] || ""}</span>
+                <span style={{ fontSize: 9, fontWeight: 600, color, letterSpacing: "0.05em" }}>{a.category}</span>
+                <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                  {a.title.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').slice(0, 80)}
+                </span>
+                <span style={{ color: "rgba(248,113,113,0.3)", fontSize: 10 }}>///</span>
               </span>
             );
           })}
         </div>
       </div>
-
-      <style>{`
-        @keyframes ticker-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
+      <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
     </div>
   );
 }
+
+// ── Filter Bar ────────────────────────────────────────────────────────────────
+
+function FilterBar({
+  filterCat, setFilterCat,
+  filterCountry, setFilterCountry,
+  count,
+}: {
+  filterCat: Category | "ALL";
+  setFilterCat: (c: Category | "ALL") => void;
+  filterCountry: Country;
+  setFilterCountry: (c: Country) => void;
+  count: number;
+}) {
+  return (
+    <div style={{
+      height: 38, flexShrink: 0,
+      background: "var(--surface-1)",
+      borderBottom: "1px solid var(--border-subtle)",
+      display: "flex", alignItems: "center",
+      padding: "0 18px", gap: 0,
+      overflowX: "auto",
+    }}>
+      {CATEGORIES.map(({ key, label }) => {
+        const active = filterCat === key;
+        const color = key !== "ALL" ? CAT_COLORS[key as Category] : "var(--text-secondary)";
+        return (
+          <button key={key} onClick={() => setFilterCat(key)} style={{
+            padding: "4px 12px",
+            background: "transparent",
+            border: "none",
+            color: active ? color : "var(--text-faint)",
+            fontSize: 11, fontWeight: active ? 600 : 400,
+            cursor: "pointer",
+            letterSpacing: "0.04em",
+            borderBottom: `2px solid ${active ? color : "transparent"}`,
+            transition: "all 0.1s",
+            whiteSpace: "nowrap",
+          }}>
+            {label}
+          </button>
+        );
+      })}
+
+      <div style={{ width: 1, height: 14, background: "var(--border-subtle)", margin: "0 10px", flexShrink: 0 }} />
+
+      {COUNTRIES.map(({ key, label, flag }) => {
+        const active = filterCountry === key;
+        const color = key !== "ALL" ? COUNTRY_COLORS[key] : "var(--text-secondary)";
+        return (
+          <button key={key} onClick={() => setFilterCountry(key)} style={{
+            padding: "4px 10px",
+            background: "transparent",
+            border: "none",
+            color: active ? color : "var(--text-faint)",
+            fontSize: 11, fontWeight: active ? 600 : 400,
+            cursor: "pointer",
+            borderBottom: `2px solid ${active ? color : "transparent"}`,
+            transition: "all 0.1s",
+            whiteSpace: "nowrap",
+            display: "flex", alignItems: "center", gap: 4,
+          }}>
+            {flag && <span style={{ fontSize: 12 }}>{flag}</span>}
+            {label}
+          </button>
+        );
+      })}
+
+      <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>
+        {count} events
+      </span>
+    </div>
+  );
+}
+
+// ── Article Row ───────────────────────────────────────────────────────────────
+
+function ArticleRow({ article, isActive, onClick }: {
+  article: Article;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const sev = getSeverity(article);
+  const ss = SEV_STYLES[sev];
+  const catColor = CAT_COLORS[article.category];
+  const ccColor = COUNTRY_COLORS[article.country] || "var(--text-muted)";
+  const clean = (s: string) => s.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: "9px 16px",
+        borderBottom: "1px solid var(--border-subtle)",
+        cursor: "pointer",
+        background: isActive ? "rgba(96,165,250,0.05)" : "transparent",
+        borderLeft: `2px solid ${isActive ? catColor : "transparent"}`,
+        transition: "background 0.1s",
+      }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+        <div style={{ width: 5, height: 5, borderRadius: "50%", background: ss.dot, flexShrink: 0 }} />
+        <span style={{ fontSize: 10, color: catColor, fontWeight: 600, letterSpacing: "0.04em" }}>{article.category}</span>
+        <span style={{ fontSize: 10, color: ccColor, fontWeight: 500 }}>{FLAGS[article.country] || ""} {article.country}</span>
+        {sev === "critical" && (
+          <span style={{ fontSize: 9, color: ss.labelColor, fontWeight: 700, letterSpacing: "0.06em" }}>· {ss.label}</span>
+        )}
+        <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: "auto" }}>{article.ago}</span>
+      </div>
+      <div style={{
+        fontSize: 12, fontWeight: 500,
+        color: sev === "critical" ? "#f1f5f9" : "var(--text-secondary)",
+        lineHeight: 1.4,
+        overflow: "hidden",
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
+      }}>
+        {clean(article.title)}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>{article.source}</div>
+    </div>
+  );
+}
+
+// ── Selected Article Card ─────────────────────────────────────────────────────
+
+function ArticleCard({ article, onClose }: { article: Article; onClose: () => void }) {
+  const sev = getSeverity(article);
+  const catColor = CAT_COLORS[article.category];
+  const clean = (s: string) => s.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+
+  return (
+    <div style={{
+      position: "absolute", bottom: 16, left: "50%",
+      transform: "translateX(-50%)",
+      width: 300, zIndex: 30,
+      background: "rgba(15,17,23,0.95)",
+      border: "1px solid var(--border-default)",
+      borderRadius: 8,
+      overflow: "hidden",
+      backdropFilter: "blur(12px)",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+    }}>
+      {/* Image */}
+      {article.image && (
+        <div style={{ width: "100%", height: 130, overflow: "hidden", position: "relative" }}>
+          <img src={article.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }}
+            onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 50%, rgba(15,17,23,0.98))" }} />
+        </div>
+      )}
+
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ display: "flex", gap: 5, marginBottom: 7, alignItems: "center" }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: catColor, letterSpacing: "0.05em" }}>{article.category}</span>
+          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>·</span>
+          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{article.source}</span>
+          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>·</span>
+          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{article.ago}</span>
+          {sev === "critical" && (
+            <span style={{ fontSize: 9, color: "#fca5a5", fontWeight: 700, marginLeft: 2 }}>CRITICAL</span>
+          )}
+        </div>
+
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4, marginBottom: 7 }}>
+          {clean(article.title)}
+        </div>
+
+        {article.description && (
+          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 10 }}>
+            {clean(article.description).replace(/<[^>]+>/g, "").slice(0, 160)}…
+          </div>
+        )}
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button onClick={onClose} style={{ fontSize: 10, color: "var(--text-faint)", background: "none", border: "none", cursor: "pointer" }}>
+            Dismiss
+          </button>
+          <a href={article.link} target="_blank" rel="noopener noreferrer" style={{
+            fontSize: 10, fontWeight: 600, color: catColor,
+            border: `1px solid ${catColor}44`,
+            padding: "3px 10px", borderRadius: 3, textDecoration: "none",
+          }}>
+            Read →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const [articles, setArticles]           = useState<Article[]>([]);
@@ -147,9 +306,8 @@ export default function Dashboard() {
   const [activeArticle, setActiveArticle] = useState<Article | null>(null);
   const [filterCat, setFilterCat]         = useState<Category | "ALL">("ALL");
   const [filterCountry, setFilterCountry] = useState<Country>("ALL");
-  const [time, setTime]                   = useState("");
-  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
   const [feedTab, setFeedTab]             = useState<"ALL"|"HIGH"|"MIL"|"NATO">("ALL");
+  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
   const wsRef                             = useRef<WebSocket | null>(null);
 
   const filtered = articles.filter(a => {
@@ -158,15 +316,16 @@ export default function Dashboard() {
     return true;
   });
 
-  const highCount   = filtered.filter(a => getSeverity(a) === "HIGH").length;
-  const mediumCount = filtered.filter(a => getSeverity(a) === "MEDIUM").length;
+  const criticalArticles = filtered.filter(a => getSeverity(a) === "critical");
+  const activeArticles   = filtered.filter(a => getSeverity(a) === "active");
+  const lowArticles      = filtered.filter(a => getSeverity(a) === "low");
+  const highCount        = criticalArticles.length;
+  const medCount         = activeArticles.length;
 
-  useEffect(() => {
-    const tick = () => setTime(new Date().toUTCString().slice(17,25) + " UTC");
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
+  const feedArticles = feedTab === "HIGH" ? criticalArticles
+    : feedTab === "MIL"  ? filtered.filter(a => a.category === "MIL")
+    : feedTab === "NATO" ? filtered.filter(a => a.category === "NATO")
+    : filtered;
 
   const loadFeed = useCallback(async () => {
     setIsLoading(true);
@@ -209,13 +368,12 @@ export default function Dashboard() {
   useEffect(() => { connectAIS(); return()=>{ wsRef.current?.close(); wsRef.current=null; }; }, [connectAIS]);
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--bg-primary)" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--surface-0)" }}>
 
-      {/* TOPBAR */}
       <Topbar
         eventCount={filtered.length}
         highCount={highCount}
-        medCount={mediumCount}
+        medCount={medCount}
         onRefresh={loadFeed}
         isLoading={isLoading}
         lastUpdated={lastUpdated}
@@ -223,86 +381,18 @@ export default function Dashboard() {
         vesselCount={vessels.length}
       />
 
-      {/* ALERT TICKER */}
       <AlertTicker articles={filtered} />
 
-      {/* FILTER BAR */}
-      <div style={{
-        height: 44, flexShrink: 0,
-        background: "#0d0f14",
-        borderBottom: "1px solid var(--border-accent)",
-        display: "flex", alignItems: "center",
-        padding: "0 20px", gap: 0,
-        overflowX: "auto",
-      }}>
-        {/* Category filters */}
-        <div style={{ display:"flex", alignItems:"center", gap:2, flex:1 }}>
-          {CATEGORIES.map(({ key, label }) => {
-            const active = filterCat === key;
-            const color = key !== "ALL" ? CAT_COLORS[key as Category] : "#94a3b8";
-            return (
-              <button key={key} onClick={() => setFilterCat(key)} style={{
-                padding: "6px 14px",
-                background: active ? `${color}18` : "transparent",
-                border: "none",
-                borderRadius: 6,
-                color: active ? color : "#4a5568",
-                fontFamily: "monospace",
-                fontSize: 11,
-                fontWeight: active ? 700 : 500,
-                cursor: "pointer",
-                letterSpacing: "0.06em",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-                outline: active ? `1px solid ${color}33` : "none",
-              }}>
-                {label.toUpperCase()}
-              </button>
-            );
-          })}
-        </div>
+      <FilterBar
+        filterCat={filterCat} setFilterCat={setFilterCat}
+        filterCountry={filterCountry} setFilterCountry={setFilterCountry}
+        count={filtered.length}
+      />
 
-        {/* Divider */}
-        <div style={{ width:1, height:22, background:"rgba(255,255,255,0.08)", margin:"0 12px", flexShrink:0 }} />
+      {/* Main */}
+      <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 360px", overflow:"hidden" }}>
 
-        {/* Country filters */}
-        <div style={{ display:"flex", alignItems:"center", gap:2 }}>
-          {COUNTRIES.map(({ key, label }) => {
-            const active = filterCountry === key;
-            const color = key !== "ALL" ? COUNTRY_COLORS[key] : "#94a3b8";
-            const flag = key !== "ALL" ? FLAGS[key] : null;
-            return (
-              <button key={key} onClick={() => setFilterCountry(key)} style={{
-                padding: "5px 12px",
-                background: active ? `${color}18` : "transparent",
-                border: "none",
-                borderRadius: 6,
-                color: active ? color : "#4a5568",
-                fontFamily: "monospace",
-                fontSize: 11,
-                fontWeight: active ? 700 : 500,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                transition: "all 0.15s",
-                outline: active ? `1px solid ${color}33` : "none",
-                display: "flex", alignItems: "center", gap: 5,
-              }}>
-                {flag && <span style={{ fontSize:13 }}>{flag}</span>}
-                {label.toUpperCase()}
-              </button>
-            );
-          })}
-        </div>
-
-        <span style={{ marginLeft:16, fontFamily:"monospace", fontSize:10, color:"#2d3748", flexShrink:0 }}>
-          {filtered.length}
-        </span>
-      </div>
-
-      {/* MAIN */}
-      <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 400px", overflow:"hidden" }}>
-
-        {/* MAP */}
+        {/* Map */}
         <div style={{ position:"relative", overflow:"hidden" }}>
           <Map
             articles={filtered}
@@ -313,271 +403,86 @@ export default function Dashboard() {
             focusCountry={filterCountry !== "ALL" ? filterCountry : null}
           />
 
-          {/* Article card overlay on map */}
-          {activeArticle && (() => {
-            const color = CAT_COLORS[activeArticle.category];
-            const sev = getSeverity(activeArticle);
-            const sc = SEV[sev];
-            return (
-              <div style={{
-                position: "absolute",
-                bottom: 24,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: 320,
-                background: "rgba(10,11,14,0.92)",
-                border: `1px solid ${color}44`,
-                borderRadius: 10,
-                overflow: "hidden",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.7)",
-                zIndex: 20,
-                backdropFilter: "blur(8px)",
-              }}>
-                {/* Image */}
-                {activeArticle.image ? (
-                  <div style={{ width:"100%", height:140, position:"relative", overflow:"hidden" }}>
-                    <img
-                      src={activeArticle.image}
-                      alt=""
-                      style={{ width:"100%", height:"100%", objectFit:"cover" }}
-                      onError={e => { (e.target as HTMLImageElement).parentElement!.style.display="none"; }}
-                    />
-                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(to bottom, transparent 40%, rgba(10,11,14,0.95))" }} />
-                    {/* Severity badge over image */}
-                    <div style={{ position:"absolute", top:10, left:10, display:"flex", gap:5 }}>
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, background:sc.bg, border:`1px solid ${sc.border}`, color:sc.text }}>{sev}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}20` }}>{activeArticle.category}</span>
-                    </div>
-                    {/* Flag over image */}
-                    <div style={{ position:"absolute", top:8, right:10, fontSize:20 }}>{FLAGS[activeArticle.country]||""}</div>
-                  </div>
-                ) : (
-                  <div style={{ width:"100%", height:6, background:`linear-gradient(to right, ${color}44, ${color}22)` }} />
-                )}
-
-                <div style={{ padding:"12px 14px 14px" }}>
-                  {/* Title */}
-                  <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.45, marginBottom:8 }}>
-                    {activeArticle.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'")}
-                  </div>
-
-                  {/* Description snippet */}
-                  {activeArticle.description && (
-                    <div style={{ fontSize:11, color:"#94a3b8", lineHeight:1.55, marginBottom:10 }}>
-                      {activeArticle.description.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/<[^>]+>/g,'').slice(0,120)}…
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568" }}>{activeArticle.source}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#2d3748" }}>·</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568" }}>{activeArticle.ago}</span>
-                    </div>
-                    <div style={{ display:"flex", gap:6 }}>
-                      <button
-                        onClick={() => setActiveArticle(null)}
-                        style={{ fontFamily:"monospace", fontSize:9, color:"#4a5568", background:"transparent", border:"1px solid #1e2533", padding:"3px 8px", borderRadius:3, cursor:"pointer" }}
-                      >✕</button>
-                      <a
-                        href={activeArticle.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontFamily:"monospace", fontSize:9, color, border:`1px solid ${color}44`, padding:"3px 10px", borderRadius:3, textDecoration:"none", fontWeight:600 }}
-                      >READ →</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          {activeArticle && (
+            <ArticleCard article={activeArticle} onClose={() => setActiveArticle(null)} />
+          )}
 
           {/* Legend */}
           <div style={{
-            position:"absolute", bottom:20, left:14, pointerEvents:"none",
-            background:"rgba(10,11,14,0.8)", borderRadius:6,
-            padding:"10px 12px", border:"1px solid var(--border)",
-            display:"flex", flexDirection:"column", gap:5,
+            position:"absolute", bottom:16, left:14,
+            background:"rgba(15,17,23,0.85)",
+            borderRadius:6, padding:"8px 10px",
+            border:"1px solid var(--border-subtle)",
+            backdropFilter:"blur(8px)",
           }}>
-            <div style={{ fontFamily:"monospace", fontSize:8, color:"var(--text-muted)", letterSpacing:"0.12em", marginBottom:3 }}>LEGEND</div>
             {[
-              { color:"#4d9ef7", label:"Estonia border" },
-              { color:"#f56565", label:"Latvia border"  },
-              { color:"#f6d860", label:"Lithuania border"},
-              { color:"#22d3ee", label:"AIS Vessel"     },
+              { color:"#4a90d9", label:"Estonia" },
+              { color:"#d94a4a", label:"Latvia"  },
+              { color:"#d9b84a", label:"Lithuania"},
+              { color:"#22d3ee", label:"Vessel"  },
+              { color:"#f87171", label:"Alert zone"},
             ].map(({ color, label }) => (
-              <div key={label} style={{ display:"flex", alignItems:"center", gap:7 }}>
-                <div style={{ width:7, height:7, borderRadius:"50%", background:color, opacity:0.85 }} />
-                <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(255,255,255,0.35)" }}>{label}</span>
+              <div key={label} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                <div style={{ width:6, height:6, borderRadius:"50%", background:color, opacity:0.7 }} />
+                <span style={{ fontSize:9, color:"var(--text-faint)" }}>{label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* SIDEBAR */}
-        <div style={{ borderLeft:"1px solid var(--border-accent)", background:"var(--bg-secondary)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        {/* Sidebar */}
+        <div style={{ borderLeft:"1px solid var(--border-subtle)", background:"var(--surface-1)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
-          {/* Selected article detail */}
-          {activeArticle && (() => {
-            const sev = getSeverity(activeArticle);
-            const sc = SEV[sev];
-            const color = CAT_COLORS[activeArticle.category];
-            const cc = COUNTRY_COLORS[activeArticle.country] || "var(--text-muted)";
-            return (
-              <div style={{ flexShrink:0, borderBottom:"1px solid var(--border-accent)", background:"var(--bg-tertiary)", position:"relative" }}>
-                <div style={{ padding:"12px 16px 14px" }}>
-                  {/* Badges */}
-                  <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
-                    <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, background:sc.bg, border:`1px solid ${sc.border}`, color:sc.text }}>{sev}</span>
-                    <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}18` }}>{activeArticle.category}</span>
-                    <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, color:cc, border:`1px solid ${cc}44`, background:`${cc}12` }}>{activeArticle.country}</span>
-                  </div>
-
-                  {/* Title */}
-                  <div style={{ fontSize:13, fontWeight:600, color:"#fff", lineHeight:1.45, marginBottom:8 }}>
-                    {activeArticle.title}
-                  </div>
-
-                  {/* Description */}
-                  {activeArticle.description && (
-                    <div style={{ fontSize:12, color:"var(--text-secondary)", lineHeight:1.65, marginBottom:10 }}>
-                      {activeArticle.description.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').slice(0,220)}
-                      {activeArticle.description.length>220?"…":""}
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)" }}>
-                      {activeArticle.source} · {activeArticle.ago}
-                    </span>
-                    <a href={activeArticle.link} target="_blank" rel="noopener noreferrer" style={{
-                      fontFamily:"monospace", fontSize:10, color:"#4d9ef7",
-                      border:"1px solid rgba(77,158,247,0.35)", padding:"4px 12px",
-                      borderRadius:3, textDecoration:"none",
-                    }}>READ →</a>
-                  </div>
-                </div>
-
-                <button onClick={() => setActiveArticle(null)} style={{
-                  position:"absolute", top:10, right:12,
-                  background:"rgba(0,0,0,0.5)", border:"1px solid var(--border)",
-                  borderRadius:"50%", width:24, height:24,
-                  color:"var(--text-muted)", cursor:"pointer", fontSize:12,
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                }}>✕</button>
-              </div>
-            );
-          })()}
-
-          {/* Feed tab switcher */}
-          <div style={{ flexShrink:0, display:"flex", borderBottom:"1px solid var(--border)", background:"var(--bg-primary)" }}>
-            {([["ALL","All"], ["HIGH","🔴 High"], ["MIL","Military"], ["NATO","NATO"]] as const).map(([tab, label]) => (
+          {/* Feed tabs */}
+          <div style={{ display:"flex", borderBottom:"1px solid var(--border-subtle)", flexShrink:0 }}>
+            {(["ALL","HIGH","MIL","NATO"] as const).map(tab => (
               <button key={tab} onClick={() => setFeedTab(tab)} style={{
                 flex:1, padding:"8px 4px",
                 background:"transparent", border:"none",
-                borderBottom:`2px solid ${feedTab===tab ? (tab==="HIGH" ? "#ef4444" : tab==="MIL" ? "#ef4444" : tab==="NATO" ? "#3b82f6" : "var(--accent-blue)") : "transparent"}`,
-                color: feedTab===tab ? "#fff" : "var(--text-muted)",
-                fontFamily:"monospace", fontSize:10, fontWeight: feedTab===tab ? 700 : 400,
-                cursor:"pointer", transition:"all 0.12s", letterSpacing:"0.05em",
-              }}>{label}</button>
+                borderBottom:`2px solid ${feedTab===tab ? (tab==="HIGH"?"#f87171":tab==="MIL"?"#f87171":tab==="NATO"?"#60a5fa":"var(--accent-blue)") : "transparent"}`,
+                color: feedTab===tab ? "var(--text-primary)" : "var(--text-faint)",
+                fontSize:10, fontWeight: feedTab===tab ? 600 : 400,
+                cursor:"pointer", transition:"all 0.1s",
+                letterSpacing:"0.05em",
+              }}>
+                {tab === "HIGH" ? "🔴 Critical" : tab}
+              </button>
             ))}
           </div>
 
-          {/* HIGH ALERTS SECTION */}
-          {feedTab === "ALL" && filtered.filter(a => getSeverity(a) === "HIGH").length > 0 && (
-            <div style={{ flexShrink:0, borderBottom:"1px solid rgba(239,68,68,0.3)", background:"rgba(239,68,68,0.04)" }}>
-              <div style={{ padding:"8px 16px 6px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontFamily:"monospace", fontSize:9, color:"#ef4444", letterSpacing:"0.15em", fontWeight:700 }}>⚡ HIGH PRIORITY</span>
-                <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(239,68,68,0.6)" }}>{filtered.filter(a=>getSeverity(a)==="HIGH").length}</span>
+          {/* Critical section */}
+          {feedTab === "ALL" && criticalArticles.length > 0 && (
+            <div style={{ flexShrink:0, borderBottom:"1px solid rgba(248,113,113,0.15)" }}>
+              <div style={{ padding:"8px 16px 4px", display:"flex", justifyContent:"space-between" }}>
+                <span style={{ fontSize:9, color:"#f87171", fontWeight:700, letterSpacing:"0.1em" }}>CRITICAL</span>
+                <span style={{ fontSize:9, color:"rgba(248,113,113,0.5)" }}>{criticalArticles.length}</span>
               </div>
-              {filtered.filter(a=>getSeverity(a)==="HIGH").slice(0,3).map((article, i) => {
-                const color = CAT_COLORS[article.category];
-                const cc = COUNTRY_COLORS[article.country] || "#64748b";
-                const isActive = activeArticle?.id===article.id && activeArticle?.country===article.country;
-                return (
-                  <div key={i} onClick={() => setActiveArticle(isActive ? null : article)}
-                    style={{
-                      padding:"8px 16px 10px",
-                      borderBottom:"1px solid rgba(239,68,68,0.15)",
-                      cursor:"pointer",
-                      background: isActive ? "rgba(239,68,68,0.1)" : "transparent",
-                      borderLeft:`3px solid ${isActive ? "#ef4444" : "rgba(239,68,68,0.4)"}`,
-                      transition:"background 0.1s",
-                    }}
-                    onMouseEnter={e=>{ (e.currentTarget as HTMLDivElement).style.background="rgba(239,68,68,0.08)"; }}
-                    onMouseLeave={e=>{ (e.currentTarget as HTMLDivElement).style.background=isActive?"rgba(239,68,68,0.1)":"transparent"; }}
-                  >
-                    <div style={{ display:"flex", gap:5, marginBottom:4, alignItems:"center" }}>
-                      <span style={{ fontSize:12 }}>{FLAGS[article.country]||"🌍"}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 5px", borderRadius:3, color, border:`1px solid ${color}44`, background:`${color}15` }}>{article.category}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"rgba(239,68,68,0.7)", marginLeft:"auto" }}>{article.ago}</span>
-                    </div>
-                    <div style={{ fontSize:12, fontWeight:600, color:"#fff", lineHeight:1.4 }}>{article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}</div>
-                    <div style={{ fontFamily:"monospace", fontSize:10, color:"var(--text-muted)", marginTop:3 }}>{article.source}</div>
-                  </div>
-                );
-              })}
+              {criticalArticles.slice(0,3).map((a,i) => (
+                <ArticleRow key={i} article={a} isActive={activeArticle?.id===a.id} onClick={() => setActiveArticle(activeArticle?.id===a.id?null:a)} />
+              ))}
             </div>
           )}
 
           {/* Feed header */}
-          <div style={{ padding:"8px 16px", borderBottom:"1px solid var(--border)", flexShrink:0, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", letterSpacing:"0.15em" }}>ALL EVENTS</span>
-            <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)" }}>{filtered.length}</span>
+          <div style={{ padding:"8px 16px", borderBottom:"1px solid var(--border-subtle)", flexShrink:0, display:"flex", justifyContent:"space-between" }}>
+            <span style={{ fontSize:9, color:"var(--text-faint)", letterSpacing:"0.1em" }}>
+              {feedTab === "ALL" ? "ALL EVENTS" : feedTab === "HIGH" ? "CRITICAL" : feedTab}
+            </span>
+            <span style={{ fontSize:9, color:"var(--text-faint)" }}>{feedArticles.length}</span>
           </div>
 
-          {/* Compact article list */}
+          {/* Article list */}
           <div style={{ flex:1, overflowY:"auto" }}>
-            {filtered.length === 0 ? (
-              <div style={{ padding:24, fontFamily:"monospace", fontSize:11, color:"var(--text-muted)", textAlign:"center" }}>No events</div>
-            ) : filtered.filter(a => {
-                if (feedTab === "HIGH") return getSeverity(a) === "HIGH";
-                if (feedTab === "MIL") return a.category === "MIL";
-                if (feedTab === "NATO") return a.category === "NATO";
-                return true;
-              }).slice(0,60).map((article, i) => {
-              const sev = getSeverity(article);
-              const sc = SEV[sev];
-              const color = CAT_COLORS[article.category];
-              const cc = COUNTRY_COLORS[article.country] || "#64748b";
-              const isActive = activeArticle?.id===article.id && activeArticle?.country===article.country;
-              return (
-                <div
-                  key={article.id+article.country+i}
-                  onClick={() => setActiveArticle(isActive ? null : article)}
-                  style={{
-                    padding:"8px 16px",
-                    borderBottom:"1px solid var(--border)",
-                    cursor:"pointer",
-                    background: isActive ? `${color}0e` : "transparent",
-                    borderLeft:`3px solid ${isActive ? color : "transparent"}`,
-                    transition:"background 0.1s",
-                    display:"flex", gap:10, alignItems:"flex-start",
-                  }}
-                  onMouseEnter={e=>{ if(!isActive)(e.currentTarget as HTMLDivElement).style.background="var(--bg-tertiary)"; }}
-                  onMouseLeave={e=>{ if(!isActive)(e.currentTarget as HTMLDivElement).style.background="transparent"; }}
-                >
-                  {/* Severity dot */}
-                  <div style={{ width:6, height:6, borderRadius:"50%", background:sc.dot, flexShrink:0, marginTop:5 }} />
-
-                  <div style={{ flex:1, minWidth:0 }}>
-                    {/* Badges */}
-                    <div style={{ display:"flex", gap:4, marginBottom:3, alignItems:"center" }}>
-                      <span style={{ fontSize:10 }}>{FLAGS[article.country]||""}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, fontWeight:700, padding:"1px 4px", borderRadius:2, color, border:`1px solid ${color}44`, background:`${color}15` }}>{article.category}</span>
-                      <span style={{ fontFamily:"monospace", fontSize:9, color:"var(--text-muted)", marginLeft:"auto" }}>{article.ago}</span>
-                    </div>
-                    {/* Title — compact */}
-                    <div style={{ fontSize:12, fontWeight:500, color:"#e2e8f0", lineHeight:1.35, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-                      {article.title.replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#039;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
-                    </div>
-                    <span style={{ fontFamily:"monospace", fontSize:9, color:"#4b5563", marginTop:2, display:"block" }}>{article.source}</span>
-                  </div>
-                </div>
-              );
-            })}
+            {feedArticles.length === 0 ? (
+              <div style={{ padding:32, fontSize:11, color:"var(--text-faint)", textAlign:"center" }}>No events</div>
+            ) : feedArticles.slice(0,60).map((a,i) => (
+              <ArticleRow
+                key={a.id+a.country+i}
+                article={a}
+                isActive={activeArticle?.id===a.id && activeArticle?.country===a.country}
+                onClick={() => setActiveArticle(activeArticle?.id===a.id && activeArticle?.country===a.country ? null : a)}
+              />
+            ))}
           </div>
         </div>
       </div>

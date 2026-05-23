@@ -96,9 +96,9 @@ const BALTIC_ISO: Record<string, string> = {
 };
 
 const COUNTRY_COLORS: Record<string, string> = {
-  EE: "#4d9ef7",
-  LV: "#f56565",
-  LT: "#f6d860",
+  EE: "#4a90d9",
+  LV: "#c0392b",
+  LT: "#c9a227",
 };
 
 const COUNTRY_CENTRES: Record<string, [number, number]> = {
@@ -270,14 +270,14 @@ export default function Map({
           }
           if (!map.getLayer(fillId)) {
             map.addLayer({ id: fillId, type: "fill", source: sid,
-              paint: { "fill-color": color, "fill-opacity": 0.04 } });
+              paint: { "fill-color": color, "fill-opacity": 0.03 } });
           }
           if (!map.getLayer(lineId)) {
             map.addLayer({ id: lineId, type: "line", source: sid,
               paint: {
                 "line-color": color,
                 "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 8, 2.5, 12, 3.5],
-                "line-opacity": 0.75,
+                "line-opacity": 0.5,
               }
             });
           }

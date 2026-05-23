@@ -1,50 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0a0b0e;
-  --bg-secondary: #0f1117;
-  --bg-tertiary: #141720;
-  --bg-elevated: #1a1f2e;
+  /* Surfaces */
+  --surface-0: #0a0b0d;
+  --surface-1: #0f1117;
+  --surface-2: #141720;
+  --surface-3: #1a1f2a;
 
-  --border: rgba(255, 255, 255, 0.07);
-  --border-accent: rgba(255, 255, 255, 0.13);
+  /* Borders */
+  --border-subtle: rgba(255,255,255,0.05);
+  --border-default: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.12);
 
-  --text-primary: #ffffff;
-  --text-secondary: #b8c8e0;
-  --text-muted: #566070;
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --text-faint: #2d3748;
 
-  --accent-blue: #4d9ef7;
-  --accent-red: #f56565;
-  --accent-amber: #f6ad55;
-  --accent-green: #48bb78;
-  --accent-purple: #9f7aea;
+  /* Operational accents — muted, purposeful */
+  --accent-blue: #60a5fa;
+  --accent-red: #f87171;
+  --accent-amber: #fbbf24;
+  --accent-green: #34d399;
+  --accent-cyan: #22d3ee;
+  --accent-purple: #a78bfa;
 
-  --cat-mil: #f56565;
-  --cat-nato: #4d9ef7;
-  --cat-cyber: #f6ad55;
-  --cat-pol: #9f7aea;
-  --cat-energy: #48bb78;
-  --cat-gen: #718096;
+  /* Category colors — desaturated */
+  --cat-mil: #f87171;
+  --cat-nato: #60a5fa;
+  --cat-cyber: #fbbf24;
+  --cat-pol: #a78bfa;
+  --cat-energy: #34d399;
+  --cat-gen: #64748b;
 
-  /* Country colors */
-  --ee: #4d9ef7;
-  --lv: #f56565;
-  --lt: #f6d860;
+  /* Country — subtle */
+  --country-ee: #4a90d9;
+  --country-lv: #d94a4a;
+  --country-lt: #d9b84a;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 html, body {
   height: 100%;
-  background: var(--bg-primary);
+  background: var(--surface-0);
   color: var(--text-primary);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
