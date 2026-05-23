@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --surface-0: #111827;
-  --surface-1: #1a2235;
-  --surface-2: #1f2a40;
-  --surface-3: #263148;
+  --g0: #0e1117;
+  --g1: #13161c;
+  --g2: #181c25;
+  --g3: #1e2330;
+  --g4: #252d3d;
 
-  --border: rgba(255,255,255,0.07);
-  --border-2: rgba(255,255,255,0.11);
+  --line: rgba(255,255,255,0.06);
+  --line-2: rgba(255,255,255,0.1);
 
-  --text-primary: #f0f4f8;
-  --text-secondary: #8899b0;
-  --text-muted: #4a5d75;
-  --text-faint: #2d3d52;
+  --t1: #e8edf2;
+  --t2: #7d8fa3;
+  --t3: #3d5068;
+  --t4: #1e2d3d;
 
-  --accent: #3b82f6;
-  --cat-mil: #ef4444;
-  --cat-nato: #3b82f6;
-  --cat-cyber: #f59e0b;
-  --cat-pol: #8b5cf6;
-  --cat-energy: #10b981;
-  --cat-gen: #6b7280;
+  --blue:   #4580c4;
+  --red:    #c0392b;
+  --amber:  #c87941;
+  --green:  #2d9b6f;
+  --cyan:   #2a8fa8;
+  --purple: #6e52a8;
+
+  --mil:    #c0392b;
+  --nato:   #4580c4;
+  --cyber:  #c87941;
+  --pol:    #6e52a8;
+  --energy: #2d9b6f;
+  --gen:    #4a5d6e;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  background: var(--surface-0);
-  color: var(--text-primary);
-  font-family: "Inter", system-ui, sans-serif;
+  background: var(--g0);
+  color: var(--t1);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -37,4 +44,4 @@ html, body {
 
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 2px; }
