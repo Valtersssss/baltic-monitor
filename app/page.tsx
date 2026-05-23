@@ -57,15 +57,15 @@ function AlertTicker({ articles }: { articles: Article[] }) {
   return (
     <div style={{
       height: 30, flexShrink: 0,
-      background: "#fef2f2",
-      borderBottom: "1px solid #fecaca",
+      background: "rgba(239,68,68,0.06)",
+      borderBottom: "1px solid rgba(239,68,68,0.2)",
       display: "flex", alignItems: "center",
       overflow: "hidden",
     }}>
       <div style={{
         flexShrink: 0,
         background: "#dc2626",
-        color: "#fff",
+        color: "var(--surface-1)",
         fontSize: 9, fontWeight: 700,
         padding: "0 12px", height: "100%",
         display: "flex", alignItems: "center",
@@ -83,7 +83,7 @@ function AlertTicker({ articles }: { articles: Article[] }) {
             <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "0 22px" }}>
               <span style={{ fontSize: 13 }}>{FLAGS[a.country] || ""}</span>
               <span style={{ fontSize: 10, fontWeight: 600, color: CAT_COLORS[a.category] }}>{a.category}</span>
-              <span style={{ fontSize: 11, color: "#374151" }}>{clean(a.title).slice(0, 90)}</span>
+              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{clean(a.title).slice(0, 90)}</span>
               <span style={{ color: "#fca5a5", fontSize: 10 }}>—</span>
             </span>
           ))}
@@ -107,14 +107,14 @@ function ArticleRow({ article, isActive, onClick }: {
       onClick={onClick}
       style={{
         padding: "10px 16px",
-        borderBottom: "1px solid var(--ui-border)",
+        borderBottom: "1px solid var(--border)",
         cursor: "pointer",
-        background: isActive ? "#eff6ff" : "#fff",
+        background: isActive ? "rgba(59,130,246,0.08)" : "var(--surface-1)",
         borderLeft: `3px solid ${isActive ? catColor : "transparent"}`,
         transition: "background 0.1s",
       }}
-      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--ui-bg-2)"; }}
-      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "#fff"; }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-1)"; }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: sevDot, flexShrink: 0 }} />
@@ -123,11 +123,11 @@ function ArticleRow({ article, isActive, onClick }: {
           {FLAGS[article.country]} {article.country}
         </span>
         {sev === "critical" && (
-          <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px" }}>
+          <span style={{ fontSize: 9, fontWeight: 700, color: "#fca5a5", background: "rgba(239,68,68,0.06)", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px" }}>
             CRITICAL
           </span>
         )}
-        <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: "auto" }}>{article.ago}</span>
+        <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>{article.ago}</span>
       </div>
       <div style={{
         fontSize: 12, fontWeight: 500,
@@ -140,7 +140,7 @@ function ArticleRow({ article, isActive, onClick }: {
       }}>
         {clean(article.title)}
       </div>
-      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{article.source}</div>
+      <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 3 }}>{article.source}</div>
     </div>
   );
 }
@@ -154,8 +154,8 @@ function ArticleCard({ article, onClose }: { article: Article; onClose: () => vo
       position: "absolute", bottom: 16, left: "50%",
       transform: "translateX(-50%)",
       width: 320, zIndex: 30,
-      background: "rgba(255,255,255,0.97)",
-      border: "1px solid var(--ui-border)",
+      background: "var(--surface-1)",
+      border: "1px solid var(--border)",
       borderRadius: 10,
       overflow: "hidden",
       boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
@@ -169,15 +169,15 @@ function ArticleCard({ article, onClose }: { article: Article; onClose: () => vo
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
           <span style={{ fontSize: 10, fontWeight: 600, color: catColor }}>{article.category}</span>
-          <span style={{ fontSize: 10, color: "#94a3b8" }}>·</span>
-          <span style={{ fontSize: 10, color: "#94a3b8" }}>{article.source}</span>
-          <span style={{ fontSize: 10, color: "#94a3b8" }}>·</span>
-          <span style={{ fontSize: 10, color: "#94a3b8" }}>{article.ago}</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>·</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{article.source}</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>·</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{article.ago}</span>
           {sev === "critical" && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px", marginLeft: 2 }}>CRITICAL</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#fca5a5", background: "rgba(239,68,68,0.06)", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px", marginLeft: 2 }}>CRITICAL</span>
           )}
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", lineHeight: 1.4, marginBottom: 7 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4, marginBottom: 7 }}>
           {clean(article.title)}
         </div>
         {article.description && (
@@ -186,11 +186,11 @@ function ArticleCard({ article, onClose }: { article: Article; onClose: () => vo
           </div>
         )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button onClick={onClose} style={{ fontSize: 11, color: "#94a3b8", background: "none", border: "none", cursor: "pointer" }}>
+          <button onClick={onClose} style={{ fontSize: 11, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}>
             Dismiss
           </button>
           <a href={article.link} target="_blank" rel="noopener noreferrer" style={{
-            fontSize: 11, fontWeight: 600, color: "#fff",
+            fontSize: 11, fontWeight: 600, color: "var(--surface-1)",
             background: catColor,
             padding: "4px 12px", borderRadius: 5, textDecoration: "none",
           }}>
@@ -269,7 +269,7 @@ export default function Dashboard() {
   useEffect(() => { connectAIS(); return()=>{ wsRef.current?.close(); wsRef.current=null; }; }, [connectAIS]);
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--ui-bg)" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--surface-0)" }}>
 
       <Topbar
         eventCount={filtered.length}
@@ -287,8 +287,8 @@ export default function Dashboard() {
       {/* Category filter */}
       <div style={{
         height: 38, flexShrink: 0,
-        background: "#fff",
-        borderBottom: "1px solid var(--ui-border)",
+        background: "var(--surface-1)",
+        borderBottom: "1px solid var(--border)",
         display: "flex", alignItems: "center",
         padding: "0 20px", gap: 0, overflowX: "auto",
       }}>
@@ -330,7 +330,7 @@ export default function Dashboard() {
           );
         })}
 
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>
           {filtered.length} events
         </span>
       </div>
@@ -356,21 +356,21 @@ export default function Dashboard() {
           {/* Map legend */}
           <div style={{
             position:"absolute", bottom:16, left:14,
-            background:"rgba(255,255,255,0.92)",
+            background:"rgba(17,24,39,0.9)",
             borderRadius:6, padding:"8px 10px",
-            border:"1px solid rgba(0,0,0,0.08)",
-            boxShadow:"0 2px 8px rgba(0,0,0,0.1)",
+            border:"1px solid var(--border)",
+            boxShadow:"0 2px 8px rgba(0,0,0,0.4)",
           }}>
             {[
               { color:"#4a90d9", label:"Estonia" },
               { color:"#c0392b", label:"Latvia"  },
               { color:"#c9a227", label:"Lithuania"},
               { color:"#0891b2", label:"AIS Vessel"},
-              { color:"#dc2626", label:"Alert zone"},
+              { color:"#fca5a5", label:"Alert zone"},
             ].map(({ color, label }) => (
               <div key={label} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
                 <div style={{ width:7, height:7, borderRadius:"50%", background:color }} />
-                <span style={{ fontSize:10, color:"#475569" }}>{label}</span>
+                <span style={{ fontSize:10, color:"var(--text-secondary)" }}>{label}</span>
               </div>
             ))}
           </div>
@@ -378,17 +378,17 @@ export default function Dashboard() {
 
         {/* Sidebar — light */}
         <div style={{
-          borderLeft:"1px solid var(--ui-border)",
-          background:"#fff",
+          borderLeft:"1px solid var(--border)",
+          background:"var(--surface-1)",
           display:"flex", flexDirection:"column",
           overflow:"hidden",
         }}>
           {/* Feed tabs */}
           <div style={{
             display:"flex",
-            borderBottom:"1px solid var(--ui-border)",
+            borderBottom:"1px solid var(--border)",
             flexShrink:0,
-            background:"var(--ui-bg-2)",
+            background:"var(--surface-2)",
           }}>
             {(["ALL","HIGH","MIL","NATO"] as const).map(tab => (
               <button key={tab} onClick={() => setFeedTab(tab)} style={{
@@ -406,9 +406,9 @@ export default function Dashboard() {
 
           {/* Critical section */}
           {feedTab === "ALL" && criticalArticles.length > 0 && (
-            <div style={{ flexShrink:0, borderBottom:"1px solid #fecaca", background:"#fef2f2" }}>
+            <div style={{ flexShrink:0, borderBottom:"1px solid rgba(239,68,68,0.2)", background:"rgba(239,68,68,0.06)" }}>
               <div style={{ padding:"8px 16px 4px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontSize:10, color:"#dc2626", fontWeight:700, letterSpacing:"0.06em" }}>CRITICAL</span>
+                <span style={{ fontSize:10, color:"#fca5a5", fontWeight:700, letterSpacing:"0.06em" }}>CRITICAL</span>
                 <span style={{ fontSize:10, color:"#fca5a5" }}>{criticalArticles.length}</span>
               </div>
               {criticalArticles.slice(0,3).map((a,i) => (
@@ -422,21 +422,21 @@ export default function Dashboard() {
           {/* Feed label */}
           <div style={{
             padding:"8px 16px",
-            borderBottom:"1px solid var(--ui-border)",
+            borderBottom:"1px solid var(--border)",
             flexShrink:0,
             display:"flex", justifyContent:"space-between", alignItems:"center",
-            background:"var(--ui-bg-2)",
+            background:"var(--surface-2)",
           }}>
-            <span style={{ fontSize:10, color:"#94a3b8", fontWeight:600, letterSpacing:"0.06em" }}>
+            <span style={{ fontSize:10, color:"var(--text-muted)", fontWeight:600, letterSpacing:"0.06em" }}>
               {feedTab === "ALL" ? "ALL EVENTS" : feedTab === "HIGH" ? "CRITICAL" : feedTab}
             </span>
-            <span style={{ fontSize:10, color:"#94a3b8" }}>{feedArticles.length}</span>
+            <span style={{ fontSize:10, color:"var(--text-muted)" }}>{feedArticles.length}</span>
           </div>
 
           {/* Article list */}
           <div style={{ flex:1, overflowY:"auto" }}>
             {feedArticles.length === 0 ? (
-              <div style={{ padding:32, fontSize:12, color:"#94a3b8", textAlign:"center" }}>No events</div>
+              <div style={{ padding:32, fontSize:12, color:"var(--text-muted)", textAlign:"center" }}>No events</div>
             ) : feedArticles.slice(0,60).map((a,i) => (
               <ArticleRow
                 key={a.id+a.country+i}

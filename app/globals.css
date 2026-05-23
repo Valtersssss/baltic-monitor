@@ -1,47 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  /* Light UI surfaces */
-  --ui-bg: #ffffff;
-  --ui-bg-2: #f8f9fb;
-  --ui-bg-3: #f1f3f7;
-  --ui-border: #e2e6ed;
-  --ui-border-2: #d0d5dd;
+  --surface-0: #111827;
+  --surface-1: #1a2235;
+  --surface-2: #1f2a40;
+  --surface-3: #263148;
 
-  /* Text */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --text-faint: #cbd5e1;
+  --border: rgba(255,255,255,0.07);
+  --border-2: rgba(255,255,255,0.11);
 
-  /* Accents */
-  --accent-blue: #2563eb;
-  --accent-red: #dc2626;
-  --accent-amber: #d97706;
-  --accent-green: #059669;
-  --accent-cyan: #0891b2;
+  --text-primary: #f0f4f8;
+  --text-secondary: #8899b0;
+  --text-muted: #4a5d75;
+  --text-faint: #2d3d52;
 
-  /* Category */
-  --cat-mil: #dc2626;
-  --cat-nato: #2563eb;
-  --cat-cyber: #d97706;
-  --cat-pol: #7c3aed;
-  --cat-energy: #059669;
-  --cat-gen: #64748b;
+  --accent: #3b82f6;
+  --cat-mil: #ef4444;
+  --cat-nato: #3b82f6;
+  --cat-cyber: #f59e0b;
+  --cat-pol: #8b5cf6;
+  --cat-energy: #10b981;
+  --cat-gen: #6b7280;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  background: var(--ui-bg);
+  background: var(--surface-0);
   color: var(--text-primary);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
