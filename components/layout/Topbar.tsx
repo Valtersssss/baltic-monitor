@@ -20,14 +20,7 @@ const SOURCES = [
   { name: "AIS", active: true },
 ];
 
-export default function Topbar({
-  highCount,
-  medCount,
-  onRefresh,
-  isLoading,
-  lastUpdated,
-  vesselCount,
-}: TopbarProps) {
+export default function Topbar({ highCount, medCount, onRefresh, isLoading, lastUpdated, vesselCount }: TopbarProps) {
   const [time, setTime] = useState("");
   const [secondsAgo, setSecondsAgo] = useState<number | null>(null);
 
@@ -42,101 +35,104 @@ export default function Topbar({
   }, [lastUpdated]);
 
   const freshnessLabel = secondsAgo === null ? null
-    : secondsAgo < 60 ? "live"
-    : secondsAgo < 300 ? `${Math.floor(secondsAgo/60)}m ago`
-    : `${Math.floor(secondsAgo/60)}m ago`;
+    : secondsAgo < 60 ? "Live"
+    : secondsAgo < 300 ? `${Math.floor(secondsAgo / 60)}m ago`
+    : `${Math.floor(secondsAgo / 60)}m ago`;
 
-  const freshnessColor = secondsAgo === null ? "#475569"
-    : secondsAgo < 120 ? "#34d399"
-    : secondsAgo < 360 ? "#fbbf24"
-    : "#f87171";
+  const freshnessColor = secondsAgo === null ? "#94a3b8"
+    : secondsAgo < 120 ? "#059669"
+    : secondsAgo < 360 ? "#d97706"
+    : "#dc2626";
 
   return (
     <header style={{
-      height: 44,
-      flexShrink: 0,
-      background: "var(--surface-1)",
-      borderBottom: "1px solid var(--border-subtle)",
-      display: "flex",
-      alignItems: "center",
-      padding: "0 18px",
-      gap: 0,
+      height: 48, flexShrink: 0,
+      background: "#fff",
+      borderBottom: "1px solid var(--ui-border)",
+      display: "flex", alignItems: "center",
+      padding: "0 20px", gap: 0,
       zIndex: 100,
     }}>
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 24 }}>
-        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#60a5fa" }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", letterSpacing: "0.06em" }}>
-          BALTIC MONITOR
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 28 }}>
+        <div style={{ width: 8, height: 8, borderRadius: 2, background: "#2563eb" }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.01em" }}>
+          Baltic Monitor
         </span>
-        <span style={{ fontSize: 9, color: "var(--text-faint)", fontWeight: 500, letterSpacing: "0.08em" }}>
+        <span style={{
+          fontSize: 9, fontWeight: 600, color: "#fff",
+          background: "#2563eb", borderRadius: 3,
+          padding: "1px 5px", letterSpacing: "0.05em",
+        }}>
           BETA
         </span>
       </div>
 
-      <div style={{ width: 1, height: 16, background: "var(--border-subtle)", marginRight: 20 }} />
+      <div style={{ width: 1, height: 18, background: "var(--ui-border)", marginRight: 20 }} />
 
-      {/* Alert counts — only show if present */}
+      {/* Alert badges */}
       <div style={{ display: "flex", gap: 8, marginRight: 20 }}>
         {highCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#f87171" }} />
-            <span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 600 }}>{highCount} critical</span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5,
+            background: "#fef2f2", border: "1px solid #fecaca",
+            borderRadius: 5, padding: "3px 9px",
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#dc2626" }} />
+            <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 600 }}>{highCount} critical</span>
           </div>
         )}
         {medCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#fbbf24" }} />
-            <span style={{ fontSize: 11, color: "#fde68a", fontWeight: 500 }}>{medCount} active</span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 5,
+            background: "#fffbeb", border: "1px solid #fde68a",
+            borderRadius: 5, padding: "3px 9px",
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#d97706" }} />
+            <span style={{ fontSize: 11, color: "#92400e", fontWeight: 500 }}>{medCount} active</span>
           </div>
         )}
       </div>
 
-      {/* Source status */}
-      <div style={{ display: "flex", gap: 10, marginRight: 20 }}>
+      {/* Sources */}
+      <div style={{ display: "flex", gap: 12 }}>
         {SOURCES.map(src => (
           <div key={src.name} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 4, height: 4, borderRadius: "50%", background: src.active ? "#34d399" : "#2d3748" }} />
-            <span style={{ fontSize: 10, color: src.active ? "var(--text-muted)" : "var(--text-faint)", letterSpacing: "0.04em" }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: src.active ? "#059669" : "#e2e8f0" }} />
+            <span style={{ fontSize: 11, color: src.active ? "#475569" : "#cbd5e1", fontWeight: 500 }}>
               {src.name}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Vessel count */}
-      {vesselCount > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#22d3ee" }} />
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{vesselCount} vessels</span>
-        </div>
-      )}
-
-      {/* Right side */}
+      {/* Right */}
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
-        {freshnessLabel && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 4, height: 4, borderRadius: "50%", background: freshnessColor }} />
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{freshnessLabel}</span>
+        {vesselCount > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#0891b2" }} />
+            <span style={{ fontSize: 11, color: "#475569" }}>{vesselCount} vessels</span>
           </div>
         )}
 
-        <span style={{ fontSize: 10, color: "var(--text-faint)", fontVariantNumeric: "tabular-nums" }}>{time}</span>
+        {freshnessLabel && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: freshnessColor }} />
+            <span style={{ fontSize: 11, color: "#475569" }}>{freshnessLabel}</span>
+          </div>
+        )}
 
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          style={{
-            fontSize: 11,
-            color: isLoading ? "var(--text-faint)" : "var(--text-muted)",
-            background: "transparent",
-            border: "1px solid var(--border-subtle)",
-            padding: "3px 10px",
-            borderRadius: 4,
-            cursor: isLoading ? "not-allowed" : "pointer",
-          }}
-        >
-          {isLoading ? "···" : "Refresh"}
+        <span style={{ fontSize: 11, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{time}</span>
+
+        <button onClick={onRefresh} disabled={isLoading} style={{
+          fontSize: 11, fontWeight: 500,
+          color: isLoading ? "#94a3b8" : "#475569",
+          background: "var(--ui-bg-2)",
+          border: "1px solid var(--ui-border)",
+          padding: "4px 12px", borderRadius: 5,
+          cursor: isLoading ? "not-allowed" : "pointer",
+        }}>
+          {isLoading ? "Loading…" : "Refresh"}
         </button>
       </div>
     </header>

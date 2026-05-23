@@ -1,62 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  /* Surfaces */
-  --surface-0: #0a0b0d;
-  --surface-1: #0f1117;
-  --surface-2: #141720;
-  --surface-3: #1a1f2a;
-
-  /* Borders */
-  --border-subtle: rgba(255,255,255,0.05);
-  --border-default: rgba(255,255,255,0.08);
-  --border-strong: rgba(255,255,255,0.12);
+  /* Light UI surfaces */
+  --ui-bg: #ffffff;
+  --ui-bg-2: #f8f9fb;
+  --ui-bg-3: #f1f3f7;
+  --ui-border: #e2e6ed;
+  --ui-border-2: #d0d5dd;
 
   /* Text */
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-  --text-faint: #2d3748;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-faint: #cbd5e1;
 
-  /* Operational accents — muted, purposeful */
-  --accent-blue: #60a5fa;
-  --accent-red: #f87171;
-  --accent-amber: #fbbf24;
-  --accent-green: #34d399;
-  --accent-cyan: #22d3ee;
-  --accent-purple: #a78bfa;
+  /* Accents */
+  --accent-blue: #2563eb;
+  --accent-red: #dc2626;
+  --accent-amber: #d97706;
+  --accent-green: #059669;
+  --accent-cyan: #0891b2;
 
-  /* Category colors — desaturated */
-  --cat-mil: #f87171;
-  --cat-nato: #60a5fa;
-  --cat-cyber: #fbbf24;
-  --cat-pol: #a78bfa;
-  --cat-energy: #34d399;
+  /* Category */
+  --cat-mil: #dc2626;
+  --cat-nato: #2563eb;
+  --cat-cyber: #d97706;
+  --cat-pol: #7c3aed;
+  --cat-energy: #059669;
   --cat-gen: #64748b;
-
-  /* Country — subtle */
-  --country-ee: #4a90d9;
-  --country-lv: #d94a4a;
-  --country-lt: #d9b84a;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   height: 100%;
-  background: var(--surface-0);
+  background: var(--ui-bg);
   color: var(--text-primary);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
+::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius: 2px; }

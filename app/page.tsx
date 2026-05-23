@@ -8,10 +8,8 @@ import Topbar from "@/components/layout/Topbar";
 
 const Map = dynamic(() => import("@/components/map/Map"), { ssr: false });
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
 const CATEGORIES: { key: Category | "ALL"; label: string }[] = [
-  { key: "ALL",    label: "All" },
+  { key: "ALL",    label: "All events" },
   { key: "MIL",   label: "Military" },
   { key: "NATO",  label: "NATO" },
   { key: "CYBER", label: "Cyber" },
@@ -28,75 +26,67 @@ const COUNTRIES: { key: Country; label: string; flag: string }[] = [
 ];
 
 const COUNTRY_COLORS: Record<string, string> = {
-  EE: "#4a90d9",
-  LV: "#d94a4a",
-  LT: "#d9b84a",
+  EE: "#1d4ed8",
+  LV: "#b91c1c",
+  LT: "#92400e",
 };
 
 const FLAGS: Record<string, string> = { EE: "🇪🇪", LV: "🇱🇻", LT: "🇱🇹" };
 
-// ── Severity ──────────────────────────────────────────────────────────────────
-
 function getSeverity(a: Article): "critical" | "active" | "low" {
   const t = (a.title + " " + a.description).toLowerCase();
-  const critical = ["attack","missile","explosion","invasion","breach","intercept","airspace violation","infrastructure damage","cable cut","jamming"];
-  const active   = ["drone","alert","military","nato","exercise","troops","deploy","sanction","cyber","border","threat","warning","vessel"];
+  const critical = ["attack","missile","explosion","invasion","breach","intercept","airspace violation","infrastructure damage","cable cut","jamming","crash","emergency"];
+  const active   = ["drone","alert","military","nato","exercise","troops","deploy","sanction","cyber","border","threat","warning","vessel","incident"];
   if (critical.some(k => t.includes(k))) return "critical";
   if (active.some(k => t.includes(k)))   return "active";
   return "low";
 }
 
-const SEV_STYLES = {
-  critical: { dot: "#f87171", label: "CRITICAL", labelColor: "#fca5a5" },
-  active:   { dot: "#fbbf24", label: "ACTIVE",   labelColor: "#fde68a" },
-  low:      { dot: "#475569", label: "",          labelColor: "#475569" },
-};
+const clean = (s: string) => s
+  .replace(/&quot;/g, '"')
+  .replace(/&#039;/g, "'")
+  .replace(/&amp;/g, "&")
+  .replace(/&lt;/g, "<")
+  .replace(/&gt;/g, ">");
 
-// ── Alert Ticker ──────────────────────────────────────────────────────────────
-
+// Alert ticker
 function AlertTicker({ articles }: { articles: Article[] }) {
   const urgent = articles.filter(a => getSeverity(a) !== "low").slice(0, 8);
   if (!urgent.length) return null;
-
   const items = [...urgent, ...urgent];
   return (
     <div style={{
-      height: 28, flexShrink: 0,
-      background: "rgba(248,113,113,0.06)",
-      borderBottom: "1px solid rgba(248,113,113,0.15)",
+      height: 30, flexShrink: 0,
+      background: "#fef2f2",
+      borderBottom: "1px solid #fecaca",
       display: "flex", alignItems: "center",
       overflow: "hidden",
     }}>
       <div style={{
         flexShrink: 0,
-        background: "#f87171",
+        background: "#dc2626",
         color: "#fff",
         fontSize: 9, fontWeight: 700,
-        padding: "0 10px", height: "100%",
+        padding: "0 12px", height: "100%",
         display: "flex", alignItems: "center",
-        letterSpacing: "0.1em",
+        letterSpacing: "0.08em",
       }}>
         ALERT
       </div>
-      <div style={{ flex: 1, overflow: "hidden", maskImage: "linear-gradient(to right, transparent, black 4%, black 96%, transparent)" }}>
+      <div style={{ flex: 1, overflow: "hidden", maskImage: "linear-gradient(to right, transparent, black 3%, black 97%, transparent)" }}>
         <div style={{
           display: "flex", alignItems: "center",
           whiteSpace: "nowrap",
-          animation: `ticker ${urgent.length * 7}s linear infinite`,
+          animation: `ticker ${urgent.length * 8}s linear infinite`,
         }}>
-          {items.map((a, i) => {
-            const color = CAT_COLORS[a.category];
-            return (
-              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0 20px" }}>
-                <span style={{ fontSize: 12 }}>{FLAGS[a.country] || ""}</span>
-                <span style={{ fontSize: 9, fontWeight: 600, color, letterSpacing: "0.05em" }}>{a.category}</span>
-                <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                  {a.title.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').slice(0, 80)}
-                </span>
-                <span style={{ color: "rgba(248,113,113,0.3)", fontSize: 10 }}>///</span>
-              </span>
-            );
-          })}
+          {items.map((a, i) => (
+            <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "0 22px" }}>
+              <span style={{ fontSize: 13 }}>{FLAGS[a.country] || ""}</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: CAT_COLORS[a.category] }}>{a.category}</span>
+              <span style={{ fontSize: 11, color: "#374151" }}>{clean(a.title).slice(0, 90)}</span>
+              <span style={{ color: "#fca5a5", fontSize: 10 }}>—</span>
+            </span>
+          ))}
         </div>
       </div>
       <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
@@ -104,120 +94,45 @@ function AlertTicker({ articles }: { articles: Article[] }) {
   );
 }
 
-// ── Filter Bar ────────────────────────────────────────────────────────────────
-
-function FilterBar({
-  filterCat, setFilterCat,
-  filterCountry, setFilterCountry,
-  count,
-}: {
-  filterCat: Category | "ALL";
-  setFilterCat: (c: Category | "ALL") => void;
-  filterCountry: Country;
-  setFilterCountry: (c: Country) => void;
-  count: number;
-}) {
-  return (
-    <div style={{
-      height: 38, flexShrink: 0,
-      background: "var(--surface-1)",
-      borderBottom: "1px solid var(--border-subtle)",
-      display: "flex", alignItems: "center",
-      padding: "0 18px", gap: 0,
-      overflowX: "auto",
-    }}>
-      {CATEGORIES.map(({ key, label }) => {
-        const active = filterCat === key;
-        const color = key !== "ALL" ? CAT_COLORS[key as Category] : "var(--text-secondary)";
-        return (
-          <button key={key} onClick={() => setFilterCat(key)} style={{
-            padding: "4px 12px",
-            background: "transparent",
-            border: "none",
-            color: active ? color : "var(--text-faint)",
-            fontSize: 11, fontWeight: active ? 600 : 400,
-            cursor: "pointer",
-            letterSpacing: "0.04em",
-            borderBottom: `2px solid ${active ? color : "transparent"}`,
-            transition: "all 0.1s",
-            whiteSpace: "nowrap",
-          }}>
-            {label}
-          </button>
-        );
-      })}
-
-      <div style={{ width: 1, height: 14, background: "var(--border-subtle)", margin: "0 10px", flexShrink: 0 }} />
-
-      {COUNTRIES.map(({ key, label, flag }) => {
-        const active = filterCountry === key;
-        const color = key !== "ALL" ? COUNTRY_COLORS[key] : "var(--text-secondary)";
-        return (
-          <button key={key} onClick={() => setFilterCountry(key)} style={{
-            padding: "4px 10px",
-            background: "transparent",
-            border: "none",
-            color: active ? color : "var(--text-faint)",
-            fontSize: 11, fontWeight: active ? 600 : 400,
-            cursor: "pointer",
-            borderBottom: `2px solid ${active ? color : "transparent"}`,
-            transition: "all 0.1s",
-            whiteSpace: "nowrap",
-            display: "flex", alignItems: "center", gap: 4,
-          }}>
-            {flag && <span style={{ fontSize: 12 }}>{flag}</span>}
-            {label}
-          </button>
-        );
-      })}
-
-      <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)", flexShrink: 0 }}>
-        {count} events
-      </span>
-    </div>
-  );
-}
-
-// ── Article Row ───────────────────────────────────────────────────────────────
-
+// Article row component
 function ArticleRow({ article, isActive, onClick }: {
-  article: Article;
-  isActive: boolean;
-  onClick: () => void;
+  article: Article; isActive: boolean; onClick: () => void;
 }) {
   const sev = getSeverity(article);
-  const ss = SEV_STYLES[sev];
   const catColor = CAT_COLORS[article.category];
-  const ccColor = COUNTRY_COLORS[article.country] || "var(--text-muted)";
-  const clean = (s: string) => s.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  const sevDot = sev === "critical" ? "#dc2626" : sev === "active" ? "#d97706" : "#cbd5e1";
 
   return (
     <div
       onClick={onClick}
       style={{
-        padding: "9px 16px",
-        borderBottom: "1px solid var(--border-subtle)",
+        padding: "10px 16px",
+        borderBottom: "1px solid var(--ui-border)",
         cursor: "pointer",
-        background: isActive ? "rgba(96,165,250,0.05)" : "transparent",
-        borderLeft: `2px solid ${isActive ? catColor : "transparent"}`,
+        background: isActive ? "#eff6ff" : "#fff",
+        borderLeft: `3px solid ${isActive ? catColor : "transparent"}`,
         transition: "background 0.1s",
       }}
-      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--surface-2)"; }}
-      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+      onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--ui-bg-2)"; }}
+      onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "#fff"; }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
-        <div style={{ width: 5, height: 5, borderRadius: "50%", background: ss.dot, flexShrink: 0 }} />
-        <span style={{ fontSize: 10, color: catColor, fontWeight: 600, letterSpacing: "0.04em" }}>{article.category}</span>
-        <span style={{ fontSize: 10, color: ccColor, fontWeight: 500 }}>{FLAGS[article.country] || ""} {article.country}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+        <div style={{ width: 6, height: 6, borderRadius: "50%", background: sevDot, flexShrink: 0 }} />
+        <span style={{ fontSize: 10, fontWeight: 600, color: catColor, letterSpacing: "0.03em" }}>{article.category}</span>
+        <span style={{ fontSize: 10, color: COUNTRY_COLORS[article.country] || "#64748b", fontWeight: 500 }}>
+          {FLAGS[article.country]} {article.country}
+        </span>
         {sev === "critical" && (
-          <span style={{ fontSize: 9, color: ss.labelColor, fontWeight: 700, letterSpacing: "0.06em" }}>· {ss.label}</span>
+          <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px" }}>
+            CRITICAL
+          </span>
         )}
-        <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: "auto" }}>{article.ago}</span>
+        <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: "auto" }}>{article.ago}</span>
       </div>
       <div style={{
         fontSize: 12, fontWeight: 500,
-        color: sev === "critical" ? "#f1f5f9" : "var(--text-secondary)",
-        lineHeight: 1.4,
+        color: sev === "critical" ? "#0f172a" : "#334155",
+        lineHeight: 1.45,
         overflow: "hidden",
         display: "-webkit-box",
         WebkitLineClamp: 2,
@@ -225,71 +140,61 @@ function ArticleRow({ article, isActive, onClick }: {
       }}>
         {clean(article.title)}
       </div>
-      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 3 }}>{article.source}</div>
+      <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>{article.source}</div>
     </div>
   );
 }
 
-// ── Selected Article Card ─────────────────────────────────────────────────────
-
+// Map article card
 function ArticleCard({ article, onClose }: { article: Article; onClose: () => void }) {
-  const sev = getSeverity(article);
   const catColor = CAT_COLORS[article.category];
-  const clean = (s: string) => s.replace(/&quot;/g,'"').replace(/&#039;/g,"'").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-
+  const sev = getSeverity(article);
   return (
     <div style={{
       position: "absolute", bottom: 16, left: "50%",
       transform: "translateX(-50%)",
-      width: 300, zIndex: 30,
-      background: "rgba(15,17,23,0.95)",
-      border: "1px solid var(--border-default)",
-      borderRadius: 8,
+      width: 320, zIndex: 30,
+      background: "rgba(255,255,255,0.97)",
+      border: "1px solid var(--ui-border)",
+      borderRadius: 10,
       overflow: "hidden",
-      backdropFilter: "blur(12px)",
-      boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
     }}>
-      {/* Image */}
       {article.image && (
-        <div style={{ width: "100%", height: 130, overflow: "hidden", position: "relative" }}>
-          <img src={article.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }}
+        <div style={{ width: "100%", height: 140, overflow: "hidden" }}>
+          <img src={article.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 50%, rgba(15,17,23,0.98))" }} />
         </div>
       )}
-
       <div style={{ padding: "12px 14px" }}>
-        <div style={{ display: "flex", gap: 5, marginBottom: 7, alignItems: "center" }}>
-          <span style={{ fontSize: 9, fontWeight: 600, color: catColor, letterSpacing: "0.05em" }}>{article.category}</span>
-          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>·</span>
-          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{article.source}</span>
-          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>·</span>
-          <span style={{ fontSize: 9, color: "var(--text-faint)" }}>{article.ago}</span>
+        <div style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: catColor }}>{article.category}</span>
+          <span style={{ fontSize: 10, color: "#94a3b8" }}>·</span>
+          <span style={{ fontSize: 10, color: "#94a3b8" }}>{article.source}</span>
+          <span style={{ fontSize: 10, color: "#94a3b8" }}>·</span>
+          <span style={{ fontSize: 10, color: "#94a3b8" }}>{article.ago}</span>
           {sev === "critical" && (
-            <span style={{ fontSize: 9, color: "#fca5a5", fontWeight: 700, marginLeft: 2 }}>CRITICAL</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 3, padding: "0 4px", marginLeft: 2 }}>CRITICAL</span>
           )}
         </div>
-
-        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4, marginBottom: 7 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a", lineHeight: 1.4, marginBottom: 7 }}>
           {clean(article.title)}
         </div>
-
         {article.description && (
-          <div style={{ fontSize: 11, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.6, marginBottom: 10 }}>
             {clean(article.description).replace(/<[^>]+>/g, "").slice(0, 160)}…
           </div>
         )}
-
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button onClick={onClose} style={{ fontSize: 10, color: "var(--text-faint)", background: "none", border: "none", cursor: "pointer" }}>
+          <button onClick={onClose} style={{ fontSize: 11, color: "#94a3b8", background: "none", border: "none", cursor: "pointer" }}>
             Dismiss
           </button>
           <a href={article.link} target="_blank" rel="noopener noreferrer" style={{
-            fontSize: 10, fontWeight: 600, color: catColor,
-            border: `1px solid ${catColor}44`,
-            padding: "3px 10px", borderRadius: 3, textDecoration: "none",
+            fontSize: 11, fontWeight: 600, color: "#fff",
+            background: catColor,
+            padding: "4px 12px", borderRadius: 5, textDecoration: "none",
           }}>
-            Read →
+            Read article →
           </a>
         </div>
       </div>
@@ -297,8 +202,7 @@ function ArticleCard({ article, onClose }: { article: Article; onClose: () => vo
   );
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-
+// Main dashboard
 export default function Dashboard() {
   const [articles, setArticles]           = useState<Article[]>([]);
   const [vessels, setVessels]             = useState<Vessel[]>([]);
@@ -317,10 +221,8 @@ export default function Dashboard() {
   });
 
   const criticalArticles = filtered.filter(a => getSeverity(a) === "critical");
-  const activeArticles   = filtered.filter(a => getSeverity(a) === "active");
-  const lowArticles      = filtered.filter(a => getSeverity(a) === "low");
-  const highCount        = criticalArticles.length;
-  const medCount         = activeArticles.length;
+  const highCount = criticalArticles.length;
+  const medCount  = filtered.filter(a => getSeverity(a) === "active").length;
 
   const feedArticles = feedTab === "HIGH" ? criticalArticles
     : feedTab === "MIL"  ? filtered.filter(a => a.category === "MIL")
@@ -331,7 +233,6 @@ export default function Dashboard() {
     setIsLoading(true);
     try {
       const res = await fetch(WORKER_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: FeedData = await res.json();
       setArticles(data.articles || []);
       setLastUpdated(new Date());
@@ -368,7 +269,7 @@ export default function Dashboard() {
   useEffect(() => { connectAIS(); return()=>{ wsRef.current?.close(); wsRef.current=null; }; }, [connectAIS]);
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--surface-0)" }}>
+    <div style={{ display:"flex", flexDirection:"column", height:"100vh", overflow:"hidden", background:"var(--ui-bg)" }}>
 
       <Topbar
         eventCount={filtered.length}
@@ -383,16 +284,61 @@ export default function Dashboard() {
 
       <AlertTicker articles={filtered} />
 
-      <FilterBar
-        filterCat={filterCat} setFilterCat={setFilterCat}
-        filterCountry={filterCountry} setFilterCountry={setFilterCountry}
-        count={filtered.length}
-      />
+      {/* Category filter */}
+      <div style={{
+        height: 38, flexShrink: 0,
+        background: "#fff",
+        borderBottom: "1px solid var(--ui-border)",
+        display: "flex", alignItems: "center",
+        padding: "0 20px", gap: 0, overflowX: "auto",
+      }}>
+        {CATEGORIES.map(({ key, label }) => {
+          const active = filterCat === key;
+          const color = key !== "ALL" ? CAT_COLORS[key as Category] : "#2563eb";
+          return (
+            <button key={key} onClick={() => setFilterCat(key)} style={{
+              padding: "4px 12px", background: "transparent", border: "none",
+              color: active ? color : "#94a3b8",
+              fontSize: 12, fontWeight: active ? 600 : 400,
+              cursor: "pointer", whiteSpace: "nowrap",
+              borderBottom: `2px solid ${active ? color : "transparent"}`,
+              transition: "all 0.1s",
+            }}>
+              {label}
+            </button>
+          );
+        })}
+
+        <div style={{ width: 1, height: 14, background: "var(--ui-border)", margin: "0 8px", flexShrink: 0 }} />
+
+        {COUNTRIES.map(({ key, label, flag }) => {
+          const active = filterCountry === key;
+          const color = key !== "ALL" ? COUNTRY_COLORS[key] : "#2563eb";
+          return (
+            <button key={key} onClick={() => setFilterCountry(key)} style={{
+              padding: "4px 10px", background: "transparent", border: "none",
+              color: active ? color : "#94a3b8",
+              fontSize: 12, fontWeight: active ? 600 : 400,
+              cursor: "pointer", whiteSpace: "nowrap",
+              borderBottom: `2px solid ${active ? color : "transparent"}`,
+              transition: "all 0.1s",
+              display: "flex", alignItems: "center", gap: 4,
+            }}>
+              {flag && <span style={{ fontSize: 13 }}>{flag}</span>}
+              {label}
+            </button>
+          );
+        })}
+
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>
+          {filtered.length} events
+        </span>
+      </div>
 
       {/* Main */}
       <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 360px", overflow:"hidden" }}>
 
-        {/* Map */}
+        {/* Map — dark */}
         <div style={{ position:"relative", overflow:"hidden" }}>
           <Map
             articles={filtered}
@@ -407,80 +353,98 @@ export default function Dashboard() {
             <ArticleCard article={activeArticle} onClose={() => setActiveArticle(null)} />
           )}
 
-          {/* Legend */}
+          {/* Map legend */}
           <div style={{
             position:"absolute", bottom:16, left:14,
-            background:"rgba(15,17,23,0.85)",
+            background:"rgba(255,255,255,0.92)",
             borderRadius:6, padding:"8px 10px",
-            border:"1px solid var(--border-subtle)",
-            backdropFilter:"blur(8px)",
+            border:"1px solid rgba(0,0,0,0.08)",
+            boxShadow:"0 2px 8px rgba(0,0,0,0.1)",
           }}>
             {[
               { color:"#4a90d9", label:"Estonia" },
-              { color:"#d94a4a", label:"Latvia"  },
-              { color:"#d9b84a", label:"Lithuania"},
-              { color:"#22d3ee", label:"Vessel"  },
-              { color:"#f87171", label:"Alert zone"},
+              { color:"#c0392b", label:"Latvia"  },
+              { color:"#c9a227", label:"Lithuania"},
+              { color:"#0891b2", label:"AIS Vessel"},
+              { color:"#dc2626", label:"Alert zone"},
             ].map(({ color, label }) => (
               <div key={label} style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
-                <div style={{ width:6, height:6, borderRadius:"50%", background:color, opacity:0.7 }} />
-                <span style={{ fontSize:9, color:"var(--text-faint)" }}>{label}</span>
+                <div style={{ width:7, height:7, borderRadius:"50%", background:color }} />
+                <span style={{ fontSize:10, color:"#475569" }}>{label}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div style={{ borderLeft:"1px solid var(--border-subtle)", background:"var(--surface-1)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
-
+        {/* Sidebar — light */}
+        <div style={{
+          borderLeft:"1px solid var(--ui-border)",
+          background:"#fff",
+          display:"flex", flexDirection:"column",
+          overflow:"hidden",
+        }}>
           {/* Feed tabs */}
-          <div style={{ display:"flex", borderBottom:"1px solid var(--border-subtle)", flexShrink:0 }}>
+          <div style={{
+            display:"flex",
+            borderBottom:"1px solid var(--ui-border)",
+            flexShrink:0,
+            background:"var(--ui-bg-2)",
+          }}>
             {(["ALL","HIGH","MIL","NATO"] as const).map(tab => (
               <button key={tab} onClick={() => setFeedTab(tab)} style={{
-                flex:1, padding:"8px 4px",
+                flex:1, padding:"9px 4px",
                 background:"transparent", border:"none",
-                borderBottom:`2px solid ${feedTab===tab ? (tab==="HIGH"?"#f87171":tab==="MIL"?"#f87171":tab==="NATO"?"#60a5fa":"var(--accent-blue)") : "transparent"}`,
-                color: feedTab===tab ? "var(--text-primary)" : "var(--text-faint)",
-                fontSize:10, fontWeight: feedTab===tab ? 600 : 400,
+                borderBottom:`2px solid ${feedTab===tab ? "#2563eb" : "transparent"}`,
+                color: feedTab===tab ? "#1d4ed8" : "#94a3b8",
+                fontSize:11, fontWeight: feedTab===tab ? 600 : 400,
                 cursor:"pointer", transition:"all 0.1s",
-                letterSpacing:"0.05em",
               }}>
-                {tab === "HIGH" ? "🔴 Critical" : tab}
+                {tab === "HIGH" ? "Critical" : tab === "ALL" ? "All" : tab}
               </button>
             ))}
           </div>
 
           {/* Critical section */}
           {feedTab === "ALL" && criticalArticles.length > 0 && (
-            <div style={{ flexShrink:0, borderBottom:"1px solid rgba(248,113,113,0.15)" }}>
-              <div style={{ padding:"8px 16px 4px", display:"flex", justifyContent:"space-between" }}>
-                <span style={{ fontSize:9, color:"#f87171", fontWeight:700, letterSpacing:"0.1em" }}>CRITICAL</span>
-                <span style={{ fontSize:9, color:"rgba(248,113,113,0.5)" }}>{criticalArticles.length}</span>
+            <div style={{ flexShrink:0, borderBottom:"1px solid #fecaca", background:"#fef2f2" }}>
+              <div style={{ padding:"8px 16px 4px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:10, color:"#dc2626", fontWeight:700, letterSpacing:"0.06em" }}>CRITICAL</span>
+                <span style={{ fontSize:10, color:"#fca5a5" }}>{criticalArticles.length}</span>
               </div>
               {criticalArticles.slice(0,3).map((a,i) => (
-                <ArticleRow key={i} article={a} isActive={activeArticle?.id===a.id} onClick={() => setActiveArticle(activeArticle?.id===a.id?null:a)} />
+                <ArticleRow key={i} article={a}
+                  isActive={activeArticle?.id===a.id}
+                  onClick={() => setActiveArticle(activeArticle?.id===a.id?null:a)} />
               ))}
             </div>
           )}
 
-          {/* Feed header */}
-          <div style={{ padding:"8px 16px", borderBottom:"1px solid var(--border-subtle)", flexShrink:0, display:"flex", justifyContent:"space-between" }}>
-            <span style={{ fontSize:9, color:"var(--text-faint)", letterSpacing:"0.1em" }}>
+          {/* Feed label */}
+          <div style={{
+            padding:"8px 16px",
+            borderBottom:"1px solid var(--ui-border)",
+            flexShrink:0,
+            display:"flex", justifyContent:"space-between", alignItems:"center",
+            background:"var(--ui-bg-2)",
+          }}>
+            <span style={{ fontSize:10, color:"#94a3b8", fontWeight:600, letterSpacing:"0.06em" }}>
               {feedTab === "ALL" ? "ALL EVENTS" : feedTab === "HIGH" ? "CRITICAL" : feedTab}
             </span>
-            <span style={{ fontSize:9, color:"var(--text-faint)" }}>{feedArticles.length}</span>
+            <span style={{ fontSize:10, color:"#94a3b8" }}>{feedArticles.length}</span>
           </div>
 
           {/* Article list */}
           <div style={{ flex:1, overflowY:"auto" }}>
             {feedArticles.length === 0 ? (
-              <div style={{ padding:32, fontSize:11, color:"var(--text-faint)", textAlign:"center" }}>No events</div>
+              <div style={{ padding:32, fontSize:12, color:"#94a3b8", textAlign:"center" }}>No events</div>
             ) : feedArticles.slice(0,60).map((a,i) => (
               <ArticleRow
                 key={a.id+a.country+i}
                 article={a}
                 isActive={activeArticle?.id===a.id && activeArticle?.country===a.country}
-                onClick={() => setActiveArticle(activeArticle?.id===a.id && activeArticle?.country===a.country ? null : a)}
+                onClick={() => setActiveArticle(
+                  activeArticle?.id===a.id && activeArticle?.country===a.country ? null : a
+                )}
               />
             ))}
           </div>
